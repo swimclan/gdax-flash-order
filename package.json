@@ -1,0 +1,34 @@
+{
+  "name": "gdax-flash-order",
+  "version": "0.0.1",
+  "description": "An algorithmic approach to getting market making orders filled on GDAX cryptocurrency exchange",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swimclan/gdax-flash-order.git"
+  },
+  "keywords": [
+    "cryptocurrency",
+    "gdax",
+    "bitcoin",
+    "trading",
+    "algorithmic"
+  ],
+  "author": "Matthew Herron",
+  "license": "LGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/swimclan/gdax-flash-order/issues"
+  },
+  "homepage": "https://github.com/swimclan/gdax-flash-order#readme",
+  "devDependencies": {
+    "jest": "^22.4.2"
+  },
+  "dependencies": {
+    "events": "^2.0.0",
+    "gdax": "^0.6.0",
+    "lodash": "^4.17.5"
+  }
+}
