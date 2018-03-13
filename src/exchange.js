@@ -38,7 +38,7 @@ class Exchange extends EventEmitter {
    * @return {Promise} A promise with the order data object or error from executor
    */
   getOrder(order) {
-    if (!order instanceof Order) {
+    if (order instanceof Order !== true) {
       return Promise.reject({error: 'Invalid input type.  Input param must be an instance of Order class'});
     }
     if (!order.valid) {
