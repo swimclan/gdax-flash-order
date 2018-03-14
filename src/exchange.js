@@ -32,6 +32,7 @@ class Exchange extends EventEmitter {
   }
 
   /**
+   * Get the details of a previously placed order at the upstream executor
    * @public
    * @async
    * @param {Order} order - The order instance of the order being requested from the executor
@@ -46,6 +47,39 @@ class Exchange extends EventEmitter {
     }
     return new Promise((resolve, reject) => {
       this.executor.getOrder(order.id, (err, response, data) => {
+        if (err) {
+          return reject(err);
+        }
+        return resolve(data);
+      });
+    });
+  }
+
+  /**
+   * Place an order on the upstream executor exchange
+   * @public
+   * @async
+   * @param {Order} order - The order instance of the order to be placed on the upstream executor
+   * @return {Promise} A promise with the newly placed order object or error object from the executor
+   */
+  placeOrder(order) {
+    if (order instanceof Order !== true) {
+      return Promise.reject({error: 'Invalid input type.  Input param myst be an instance of Order class'});
+    }
+    if (!order.valid) {
+      return Promise.reject({error: 'Invalid order. Input order must be valid (order.valid === true)'});      
+    }
+    let params = {
+      size: order.size,
+      side: order.side,
+      product_id: order.product
+    }
+    params.type = order.market ? 'market' : 'limit';
+    if (params.type === 'limit') {
+      params.price = order.limit
+    }
+    return new Promise((resolve, reject) => {
+      this.executor.placeOrder(params, (err, response, data) => {
         if (err) {
           return reject(err);
         }

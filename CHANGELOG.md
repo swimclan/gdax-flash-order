@@ -4,7 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.0.3] - 2018-03-12
+## [0.0.4] - 2018-03-14
+### Added
+- Place order method in Exchange class and unit tests
+
+## [0.0.3] - 2018-03-13
 ### Fixed
 - Order instance checking in getOrders method in exchange class
 
