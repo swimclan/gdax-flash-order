@@ -36,7 +36,7 @@ class Exchange extends EventEmitter {
    * @public
    * @async
    * @param {Order} order - The order instance of the order being requested from the executor
-   * @return {Promise} A promise with the order data object or error from executor
+   * @return {Promise<any>} A promise with the order data object or error from executor
    */
   getOrder(order) {
     if (order instanceof Order !== true) {
@@ -60,14 +60,14 @@ class Exchange extends EventEmitter {
    * @public
    * @async
    * @param {Order} order - The order instance of the order to be placed on the upstream executor
-   * @return {Promise} A promise with the newly placed order object or error object from the executor
+   * @return {Promise<any>} A promise with the newly placed order object or error object from the executor
    */
   placeOrder(order) {
     if (order instanceof Order !== true) {
-      return Promise.reject({error: 'Invalid input type.  Input param myst be an instance of Order class'});
+      return Promise.reject({error: 'Invalid input type.  Input param must be an instance of Order class'});
     }
     if (!order.valid) {
-      return Promise.reject({error: 'Invalid order. Input order must be valid (order.valid === true)'});      
+      return Promise.reject({error: 'Invalid order. Input order must be valid (order.valid === true)'});
     }
     let params = {
       size: order.size,
@@ -84,6 +84,30 @@ class Exchange extends EventEmitter {
           return reject(err);
         }
         return resolve(data)
+      });
+    });
+  }
+
+  /**
+   * Cancel an order on the upstream executor exchange
+   * @public
+   * @async
+   * @param {Order} order - The order instance to be cancelled on the upstream executor
+   * @return {Promise<any[]>} A promise with an array of length one containing the id of the order cancelled on the upstream exchange
+   */
+  cancelOrder(order) {
+    if (order instanceof Order !== true) {
+      return Promise.reject({error: 'Invalid input type. Input param must be an instance of the Order class'});
+    }
+    if (!order.valid) {
+      return Promise.reject({error: 'Invalid order. Input order must be valid (order.valid === true)'});
+    }
+    return new Promise((resolve, reject) => {
+      this.executor.cancelOrder(order.id, (err, response, data) => {
+        if (err) {
+          return reject(err);
+        }
+        return resolve(data);
       });
     });
   }

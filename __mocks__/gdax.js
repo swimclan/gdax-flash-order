@@ -2,6 +2,8 @@
 const {has} = require('lodash');
 const Gdax = jest.genMockFromModule('gdax');
 
+let orders = ['68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08', 'd0c5340b-6d6c-49d9-b567-48c4bfca13d2'];
+
 Gdax.AuthenticatedClient = function(key, secret, passphrase, apiURI, options = {}) {
   this.key = key;
   this.secret = secret;
@@ -14,7 +16,7 @@ Gdax.AuthenticatedClient = function(key, secret, passphrase, apiURI, options = {
 
   this.getOrder = function(orderId, callback) {
     if (orderId !== '68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08') {
-      return callback({message: 'Invalid orderId supplied'}, {}, null);
+      return callback({message: 'Invalid orderId supplied.  Order not found.'}, {}, null);
     }
     return callback(null, {}, {
       id: '68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08',
@@ -35,6 +37,15 @@ Gdax.AuthenticatedClient = function(key, secret, passphrase, apiURI, options = {
       status: 'done',
       settled: true
     });
+  }
+
+  this.cancelOrder = function(orderId, callback) {
+    const targetOrder = orders.indexOf(orderId);
+    if (targetOrder === -1) {
+      return callback({message: 'Invalid orderId supplied.  Order not found.'}, {}, null);
+    }
+
+    return callback(null, {}, orders.splice(targetOrder, 1));
   }
 
   this.placeOrder = function(params, callback) {

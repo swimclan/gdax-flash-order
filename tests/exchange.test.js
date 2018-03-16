@@ -293,4 +293,169 @@ describe('Test Exchange class', () => {
       });
     });
   });
+
+  describe('Test exchange cancelOrder() calls', () => {
+    let exchange, Order, invalidOrder, validOrderWithId, validOrderNullId, anotherValidOrderWithId, unknownOrderWithId;
+    beforeAll(() => {
+      const Gdax = require('gdax');
+      Order = require('../src/order');
+      executor = new Gdax.AuthenticatedClient(key='myKey', secret='mySecret', passphrase='myPassphrase');
+      exchange = new Exchange({executor});
+      invalidOrder = new Order({
+        size: 1,
+        side: 'buy',
+        limit: 798.32
+      });
+      validOrderWithId = new Order({
+        size: 1,
+        side: 'buy',
+        limit: 798.32,
+        product: 'ETH-USD'
+      });
+      anotherValidOrderWithId = new Order({
+        size: 2.3,
+        side: 'sell',
+        limit: 711.09,
+        product: 'ETH-USD'
+      });
+      validOrderNullId = new Order({
+        size: 1,
+        side: 'buy',
+        limit: 798.32,
+        product: 'ETH-USD'
+      });
+      unknownOrderWithId = new Order({
+        size: 1,
+        side: 'buy',
+        limit: 798.32,
+        product: 'ETH-USD'
+      });
+    
+      validOrderWithId.setId('68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08');
+      anotherValidOrderWithId.setId('d0c5340b-6d6c-49d9-b567-48c4bfca13d2');
+      unknownOrderWithId.setId('h4837hf7-19nv-7722-of38-jfq9n2js0knv');
+    });
+
+    test('cancelOrder() calls will return rejected promise if a string is passed to it', () => {
+      expect.assertions(2);
+      const success = jest.fn();
+      exchange.cancelOrder('68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08').then((orders) => {
+        success(orders);
+      }).catch((err) => {
+        expect(typeof err).toBe('object');
+        expect(success).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    test('cancelOrder() calls will return rejected promise if an array is passed to it', () => {
+      expect.assertions(2);
+      const success = jest.fn();
+      exchange.cancelOrder(['68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08']).then((orders) => {
+        success(orders);
+      }).catch((err) => {
+        expect(typeof err).toBe('object');
+        expect(success).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    test('cancelOrder() will return a rejected promise if a number is passed to it', () => {
+      expect.assertions(2);
+      const success = jest.fn();
+      exchange.cancelOrder(23948234985).then((orders) => {
+        success(orders);
+      }).catch((err) => {
+        expect(typeof err).toBe('object');
+        expect(success).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    test('cancelOrder() will return a rejected promise if a plain object is passed to it', () => {
+      expect.assertions(2);
+      const success = jest.fn();
+      exchange.cancelOrder({orderId: '68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08'}).then((orders) => {
+        success(orders);
+      }).catch((err) => {
+        expect(typeof err).toBe('object');
+        expect(success).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    test('cancelOrder() will return a rejected promise if a boolean is passed to it', () => {
+      expect.assertions(2);
+      const success = jest.fn();
+      exchange.cancelOrder(true).then((orders) => {
+        success(orders);
+      }).catch((err) => {
+        expect(typeof err).toBe('object');
+        expect(success).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    test('cancelOrder() will return a rejected promise if an invalid order instance is passed to it', () => {
+      expect.assertions(2);
+      const success = jest.fn();
+      exchange.cancelOrder(invalidOrder).then((orders) => {
+        success(orders);
+      }).catch((err) => {
+        expect(typeof err).toBe('object');
+        expect(success).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    test('cancelOrder() will return a rejected promise if an order with an unknown orderId is passed to it', () => {
+      expect.assertions(2);
+      const success = jest.fn();
+      exchange.cancelOrder(unknownOrderWithId).then((orders) => {
+        success(orders);
+      }).catch((err) => {
+        expect(typeof err).toBe('object');
+        expect(success).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    test('cancelOrder() will return a rejected promise if an order instance with a null id is passed to it', () => {
+      expect.assertions(2);
+      const success = jest.fn();
+      exchange.cancelOrder(validOrderNullId).then((orders) => {
+        success(orders);
+      }).catch((err) => {
+        expect(typeof err).toBe('object');
+        expect(success).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    test('cancelOrder() will return a resolved promise with an array of a single orderId if a valid order instance with a known orderId is passed to it', () => {
+      expect.assertions(3);
+      const failure = jest.fn();
+      exchange.cancelOrder(validOrderWithId).then((orders) => {
+        expect(Array.isArray(orders)).toBe(true);
+        expect(orders.length).toBe(1);
+        return;
+      }).catch((err) => {
+        failure(err);
+      }).then(() => {
+        expect(failure).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    test('cancelOrder() will return a rejected promise, if the same order id appears on multiple cancelled orders', () => {
+      expect.assertions(2);
+      const failure = jest.fn();
+      exchange.cancelOrder(anotherValidOrderWithId).then((orders) => {
+        expect(Array.isArray(orders) && orders.length === 1).toBe(true);
+        const dupOrder = new Order({
+          side: 'buy',
+          size: '3.2',
+          product: 'BCH-USD',
+          market: true
+        });
+        dupOrder.setId(orders[0]);
+        return exchange.cancelOrder(dupOrder);
+      }).catch((err) => {
+        failure(err);
+      }).then((orders) => {
+        expect(failure).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
 });
