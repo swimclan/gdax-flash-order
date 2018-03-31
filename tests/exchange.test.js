@@ -13,9 +13,10 @@ describe('Test Exchange class', () => {
       expect(exchange instanceof EventEmitter).toBe(true);
     });
 
-    test('instances of Exchange class have executor, websocket and valid properties', () => {
+    test('instances of Exchange class have executor, feed, broker and valid properties', () => {
       expect(new Exchange({})).toHaveProperty('executor');
       expect(new Exchange({})).toHaveProperty('feed');
+      expect(new Exchange({})).toHaveProperty('broker');
       expect(new Exchange({})).toHaveProperty('valid');
     });
 
@@ -34,6 +35,12 @@ describe('Test Exchange class', () => {
       const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
       const exchange = new Exchange(credentials);
       expect(exchange.valid).toBe(true);
+    });
+
+    test('instances of Exchange will have a valid broker instance assigned', () => {
+      const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
+      const exchange = new Exchange(credentials);
+      expect(exchange.broker && exchange.broker.valid).toBeTruthy();
     });
   });
 

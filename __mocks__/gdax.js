@@ -1,7 +1,8 @@
 'use strict';
 const {get, has} = require('lodash');
 const Gdax = jest.genMockFromModule('gdax');
-const WebSocket = require('ws');
+const {EventEmitter} = require('events');
+const {whilst} = require('async');
 
 let orders = ['68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08', 'd0c5340b-6d6c-49d9-b567-48c4bfca13d2'];
 
@@ -105,6 +106,38 @@ Gdax.WebsocketClient = function(products=[], uri='wss://test.mock.com', credenti
   this.auth = credentials
   this.socket = {readyState: 0}
   this.channels = get(options, 'channels', []).concat(['heartbeat']);
+
+  let tradeId = 100000000;
+  // emit fake test messages every 600ms
+  whilst(() => tradeId < 100000010, (cb) => {
+    this.emit('message', { type: 'ticker',
+    sequence: 5560214656,
+    product_id: 'BTC-USD',
+    price: '7155.80000000',
+    open_24h: '6604.33000000',
+    volume_24h: '18682.08960534',
+    low_24h: '7155.80000000',
+    high_24h: '7200.00000000',
+    volume_30d: '592512.25034351',
+    best_bid: '7155.14',
+    best_ask: '7155.8',
+    side: 'buy',
+    time: '2018-03-31T16:53:07.051000Z',
+    trade_id: ++tradeId,
+    last_size: '0.10405984' });
+    setTimeout(cb, 600);
+  }, (err) => { return; } );
+
+  // emit fake test heartbeats every 1s
+  whilst(() => tradeId < 100000010, (cb) => {
+    this.emit('heartbeat', { type: 'heartbeat',
+    last_trade_id: tradeId,
+    product_id: 'BTC-USD',
+    sequence: 5560338726,
+    time: new Date().toISOString() });
+    setTimeout(cb, 1000);
+  }, (err) => { return; } );
 }
+Gdax.WebsocketClient.prototype = new EventEmitter();
 
 module.exports = Gdax;

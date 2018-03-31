@@ -1,5 +1,6 @@
 const {AuthenticatedClient, WebsocketClient} = require('gdax');
 const Order = require('./order');
+const Broker = require('./broker');
 const {EventEmitter} = require('events');
 const {get} = require('lodash');
 
@@ -19,6 +20,8 @@ class Exchange extends EventEmitter {
     this.executor =  new AuthenticatedClient(key, secret, passphrase);
     this.feed = new WebsocketClient([], undefined, {key: key, secret: secret, passphrase: passphrase}, {channels: ['ticker']});
     this.valid = this._testValid();
+    // Test for broker instance for final validity check
+    this.valid = this._generateBroker();
   }
 
   /**
@@ -36,6 +39,16 @@ class Exchange extends EventEmitter {
       this.feed &&
       this.feed instanceof WebsocketClient
     );
+  }
+
+  /**
+   * Generate the assigned broker to this exchange instance
+   * @private
+   * @return {Boolean} Boolean value that demonstrates if the broker instance generated is valid
+   */
+  _generateBroker() {
+    this.broker = new Broker(this);
+    return this.broker.valid;
   }
 
   /**

@@ -11,6 +11,7 @@ class Broker extends EventEmitter {
   _testValid() {
     return Boolean(
       this.exchange &&
+      this.exchange.valid &&
       this.exchange.executor instanceof AuthenticatedClient &&
       this.exchange.feed instanceof WebsocketClient
     );

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.7] - 2018-03-31
+### Added
+- Mock websocket events for heartbeat and ticker messages
+- Broker implementation in exchange constructor
+
 ## [0.0.6] - 2018-03-31
 ### Fixed
 - Exchange constructor takes credentials hash instead of full gdax client so both socket and auth client can be created
