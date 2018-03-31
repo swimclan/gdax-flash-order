@@ -13,27 +13,26 @@ describe('Test Exchange class', () => {
       expect(exchange instanceof EventEmitter).toBe(true);
     });
 
-    test('instances of Exchange class have executor and valid properties', () => {
+    test('instances of Exchange class have executor, websocket and valid properties', () => {
       expect(new Exchange({})).toHaveProperty('executor');
+      expect(new Exchange({})).toHaveProperty('feed');
       expect(new Exchange({})).toHaveProperty('valid');
     });
 
-    test('instances of Exchange are not valid if an executor is not passed to it', () => {
+    test('instances of Exchange are not valid if a credentials object is not passed to it', () => {
       const exchange = new Exchange({});
       expect(exchange.valid).toBe(false);
     });
 
-    test('instances of Exchange are not valid if supplied executor does not have all authentication props', () => {
-      const Gdax = require('gdax');
-      const executor = new Gdax.AuthenticatedClient(key='myKey');
-      const exchange = new Exchange({executor});
+    test('instances of Exchange are not valid if supplied credentials object does not have all authentication props', () => {
+      const credentials = {key: 'myKey'};
+      const exchange = new Exchange(credentials);
       expect(exchange.valid).toBe(false);
     });
 
-    test('instances of Exchange are valid if supplied executor has all authentication props', () => {
-      const Gdax = require('gdax');
-      const executor = new Gdax.AuthenticatedClient(key='myKey', secret='mySecret', passphrase='myPassphrase');
-      const exchange = new Exchange({executor});
+    test('instances of Exchange are valid if supplied credentials object has all authentication props', () => {
+      const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
+      const exchange = new Exchange(credentials);
       expect(exchange.valid).toBe(true);
     });
   });
@@ -41,10 +40,9 @@ describe('Test Exchange class', () => {
   describe('Test Exchange getOrder() calls', () => {
     let exchange, knownOrder, unknownOrder, validOrder, invalidOrder;
     beforeAll(() => {
-      const Gdax = require('gdax');
       const Order = require('../src/order');
-      const executor = new Gdax.AuthenticatedClient(key='myKey', secret='mySecret', passphrase='myPassphrase');
-      exchange = new Exchange({executor});
+      const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
+      exchange = new Exchange(credentials);
       knownOrder = new Order({
         product: 'BTC-USD',
         side: 'buy',
@@ -161,10 +159,9 @@ describe('Test Exchange class', () => {
   describe('Test Exchange placeOrder() calls', () => {
     let exchange, validOrder, invalidOrder;
     beforeAll(() => {
-      const Gdax = require('gdax');
       const Order = require('../src/order');
-      const executor = new Gdax.AuthenticatedClient(key='myKey', secret='mySecret', passphrase='myPassphrase');
-      exchange = new Exchange({executor});
+      const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
+      exchange = new Exchange(credentials);
       validMarketOrder = new Order({
         product: 'BTC-USD',
         side: 'buy',
@@ -279,10 +276,9 @@ describe('Test Exchange class', () => {
     });
 
     test('placeOrder() will return a rejected promise if an error occurs during the async operation (ie no connection)', () => {
-      const Gdax = require('gdax');
-      const executor = new Gdax.AuthenticatedClient(key='myKey', secret='mySecret', passphrase='myPassphrase');
-      executor._connection(false); // simulate internet connection failure
-      downExchange = new Exchange({executor});
+      const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
+      downExchange = new Exchange(credentials);
+      downExchange.executor._connection(false); // simulate internet connection failure
       const success = jest.fn();
       expect.assertions(2);
       downExchange.placeOrder(validLimitOrder).then((order) => {
@@ -297,10 +293,9 @@ describe('Test Exchange class', () => {
   describe('Test exchange cancelOrder() calls', () => {
     let exchange, Order, invalidOrder, validOrderWithId, validOrderNullId, anotherValidOrderWithId, unknownOrderWithId;
     beforeAll(() => {
-      const Gdax = require('gdax');
       Order = require('../src/order');
-      executor = new Gdax.AuthenticatedClient(key='myKey', secret='mySecret', passphrase='myPassphrase');
-      exchange = new Exchange({executor});
+      const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
+      exchange = new Exchange(credentials);
       invalidOrder = new Order({
         size: 1,
         side: 'buy',

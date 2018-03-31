@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.6] - 2018-03-31
+### Fixed
+- Exchange constructor takes credentials hash instead of full gdax client so both socket and auth client can be created
+
+### Added
+- Initial Broker class
+
 ## [0.0.5] - 2018-03-15
 ### Added
 - Cancel order method in Exchange class and unit tests

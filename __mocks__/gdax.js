@@ -1,6 +1,7 @@
 'use strict';
-const {has} = require('lodash');
+const {get, has} = require('lodash');
 const Gdax = jest.genMockFromModule('gdax');
+const WebSocket = require('ws');
 
 let orders = ['68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08', 'd0c5340b-6d6c-49d9-b567-48c4bfca13d2'];
 
@@ -98,6 +99,12 @@ Gdax.AuthenticatedClient = function(key, secret, passphrase, apiURI, options = {
         break;
     }
   }
+}
+
+Gdax.WebsocketClient = function(products=[], uri='wss://test.mock.com', credentials={}, options={}) {
+  this.auth = credentials
+  this.socket = {readyState: 0}
+  this.channels = get(options, 'channels', []).concat(['heartbeat']);
 }
 
 module.exports = Gdax;

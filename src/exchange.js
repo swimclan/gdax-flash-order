@@ -1,3 +1,4 @@
+const {AuthenticatedClient, WebsocketClient} = require('gdax');
 const Order = require('./order');
 const {EventEmitter} = require('events');
 const {get} = require('lodash');
@@ -8,12 +9,15 @@ const {get} = require('lodash');
 class Exchange extends EventEmitter {
   /**
    * 
-   * @param {Object} options - An object representing the options for constructing a new exchange instance
-   * @param {Gdax.AuthenticatedClient} executor - An instance of the Gdax authenticated client
+   * @param {Object} credentials - An object representing the gdax credentials for constructing a new exchange instance with gdax client and websocket
    */
-  constructor(options = {}) {
-    super(options);
-    this.executor = get(options, 'executor', null);
+  constructor(credentials = {}) {
+    super(credentials);
+    const key = get(credentials, 'key', null);
+    const secret = get(credentials, 'secret', null);
+    const passphrase = get(credentials, 'passphrase', null);
+    this.executor =  new AuthenticatedClient(key, secret, passphrase);
+    this.feed = new WebsocketClient([], undefined, {key: key, secret: secret, passphrase: passphrase}, {channels: ['ticker']});
     this.valid = this._testValid();
   }
 
@@ -27,7 +31,10 @@ class Exchange extends EventEmitter {
       this.executor &&
       this.executor.key &&
       this.executor.secret &&
-      this.executor.passphrase
+      this.executor.passphrase &&
+      this.executor instanceof AuthenticatedClient &&
+      this.feed &&
+      this.feed instanceof WebsocketClient
     );
   }
 
