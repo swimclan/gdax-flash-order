@@ -1,6 +1,7 @@
 const {AuthenticatedClient, WebsocketClient} = require('gdax');
 const Order = require('./order');
 const Broker = require('./broker');
+const utils = require('./utils');
 const {EventEmitter} = require('events');
 const {get} = require('lodash');
 
@@ -18,7 +19,7 @@ class Exchange extends EventEmitter {
     const secret = get(credentials, 'secret', null);
     const passphrase = get(credentials, 'passphrase', null);
     this.executor =  new AuthenticatedClient(key, secret, passphrase);
-    this.feed = new WebsocketClient([], undefined, {key: key, secret: secret, passphrase: passphrase}, {channels: ['ticker']});
+    this.feeds = {};
     this.valid = this._testValid();
     // Test for broker instance for final validity check
     this.valid = this._generateBroker();
@@ -27,7 +28,7 @@ class Exchange extends EventEmitter {
   /**
    * Test validity of instances of exchange class
    * @private
-   * @return {boolean} Boolean representing the validity of instances of exchange
+   * @return {Boolean} Boolean representing the validity of instances of exchange
    */
   _testValid() {
     return Boolean(
@@ -36,8 +37,7 @@ class Exchange extends EventEmitter {
       this.executor.secret &&
       this.executor.passphrase &&
       this.executor instanceof AuthenticatedClient &&
-      this.feed &&
-      this.feed instanceof WebsocketClient
+      typeof this.feeds === 'object'
     );
   }
 
@@ -49,6 +49,34 @@ class Exchange extends EventEmitter {
   _generateBroker() {
     this.broker = new Broker(this);
     return this.broker.valid;
+  }
+
+  /**
+   * Load a new WebsocketClient to the feeds collection
+   * @public
+   * @param {String} product - The product signature of the currency pair feed being loaded
+   * @return {String} Product signature of the currency pair that was successfully loaded
+   */
+  loadFeed(product) {
+    if (!product || typeof product !== 'string' || !utils.validateProduct(product)) {
+      throw new TypeError('A valid currency pair signature must be supplied');
+    }
+    this.feeds[product] = new WebsocketClient([product], 'wss://ws-feed.gdax.com', this.executor, { channels: 'ticker' });
+    return product;
+  }
+
+  /**
+   * Close out a loaded feed from the exchange
+   * @public
+   * @param {String} product - The product signature of the currency pair feed being closed out
+   * @return {String} Product signature of the currency pair that was successfully closed out
+   */
+  closeFeed(product) {
+    if (!product || typeof product !== 'string' || !utils.validateProduct(product)) {
+      throw new TypeError('A valid currency pair signature must be supplied');
+    }
+    delete this.feeds[product];
+    return product;
   }
 
   /**

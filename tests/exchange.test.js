@@ -1,3 +1,4 @@
+const { WebsocketClient} = require('gdax');
 const Exchange = require('../src/exchange');
 
 describe('Test Exchange class', () => {
@@ -13,11 +14,17 @@ describe('Test Exchange class', () => {
       expect(exchange instanceof EventEmitter).toBe(true);
     });
 
-    test('instances of Exchange class have executor, feed, broker and valid properties', () => {
+    test('instances of Exchange class have executor, feeds, broker and valid properties', () => {
       expect(new Exchange({})).toHaveProperty('executor');
-      expect(new Exchange({})).toHaveProperty('feed');
+      expect(new Exchange({})).toHaveProperty('feeds', {});
       expect(new Exchange({})).toHaveProperty('broker');
       expect(new Exchange({})).toHaveProperty('valid');
+    });
+
+    test('intstances of exchange are initialized with an empty feeds object', () => {
+      const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
+      const exchange = new Exchange(credentials);
+      expect(exchange.feeds).toEqual({});
     });
 
     test('instances of Exchange are not valid if a credentials object is not passed to it', () => {
@@ -41,6 +48,66 @@ describe('Test Exchange class', () => {
       const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
       const exchange = new Exchange(credentials);
       expect(exchange.broker && exchange.broker.valid).toBeTruthy();
+    });
+  });
+
+  describe('Test loadFeed() functionality', () => {
+    let exchange, credentials;
+    beforeEach(() => {
+      credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassPhrase'};
+      exchange = new Exchange(credentials);
+    });
+    test('loadFeed() will throw a TypeError if nothing is passed to it', () => {
+      expect(() => exchange.loadFeed()).toThrow(TypeError);
+    });
+    
+    test('loadFeed() will throw TypeError if anything other than a valid currency pair string is passed in', () => {
+      expect(() => exchange.loadFeed('ET-USD')).toThrow(TypeError);
+      expect(() => exchange.loadFeed(0)).toThrow(TypeError);
+      expect(() => exchange.loadFeed(['ETH-USD'])).toThrow(TypeError);
+    });
+
+    test('If a valid currency product string is passed to loadFeed(), feeds collection will have a property for that product string', () => {
+      exchange.loadFeed('ETH-USD');
+      expect(typeof exchange.feeds['ETH-USD'] !== 'undefined');
+    });
+
+    test('If a valid currency product string is passed to loadFeed(), the value of that product feed will be an instance of gdax WebsocketClient', () => {
+      exchange.loadFeed('BTC-USD');
+      expect(exchange.feeds['BTC-USD'] instanceof WebsocketClient).toBe(true);
+    });
+
+    test('If a valid currency pair string is passed to loadFeed() then the string of the currency pair will be returned by the function', () => {
+      expect(exchange.loadFeed('BCH-USD')).toBe('BCH-USD');
+    });
+  });
+
+  describe('Test closeFeed() functionality', () => {
+    let exchange, credentials;
+    beforeEach(() => {
+      credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassPhrase'};
+      exchange = new Exchange(credentials);
+    });
+    test('closeFeed() will throw a TypeError if nothing is passed to it', () => {
+      expect(() => exchange.closeFeed()).toThrow(TypeError);
+    });
+
+    test('closeFeed() will throw if anything other than a valid currency pair signature string is passed to it', () => {
+      expect(() => exchange.closeFeed('ET-USD')).toThrow(TypeError);
+      expect(() => exchange.closeFeed(['BCH-USD'])).toThrow(TypeError);
+      expect(() => exchange.closeFeed(12)).toThrow(TypeError);
+    });
+
+    test('If valid currency signature is passed to closeFeed() that currency property will not exist in feeds collection', () => {
+      exchange.loadFeed('ETH-USD');
+      expect(typeof exchange.feeds['ETH-USD']).not.toBe('undefined');
+      exchange.closeFeed('ETH-USD');
+      expect(typeof exchange.feeds['ETH-USD']).toBe('undefined');
+    });
+
+    test('If a valid currency signature is passed to closeFeed() but is not currently a loaded feed, nothing will happen', () => {
+      exchange.closeFeed('BTC-USD');
+      expect(typeof exchange.feeds['BTC-USD']).toBe('undefined');
     });
   });
 
