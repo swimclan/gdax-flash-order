@@ -13,6 +13,7 @@ class Broker extends EventEmitter {
   constructor(exchange={}) {
     super(exchange);
     this.exchange = exchange;
+    this.enabled = false;
     this.queue = [];
     this.valid = this._testValid();
   }
@@ -32,6 +33,42 @@ class Broker extends EventEmitter {
   }
 
   /**
+   * A function to disable the broker
+   * @private
+   * @return {Boolean} A boolean true when disabling was successful
+   */
+  _disableBroker() {
+    this.enabled = false;
+    this.exchange.closeFeed();
+    return true;
+  }
+
+  /**
+   * A function to enable the broker
+   * @private
+   * @return {Boolean} A boolean true when enabling was successful
+   */
+  _enableBroker() {
+    this.enabled = true;
+    return true;
+  }
+
+   /**
+    * A function to process the pending orders in the broker order queue
+    * @private
+    * @return {Boolean} A boolean true when process is initiated
+    */
+   _processQueue() {
+    if (!this.enabled) {
+      return false;
+    }
+    this.queue
+      .filter(order => order.status === 'created')
+      .forEach(order => this.exchange.loadFeed(order.product), this);
+    return true;
+  }
+
+  /**
    * Load a valid order into the broker's order queue
    * @public
    * @param {Order} order - The order to be loaded into the order queue
@@ -42,6 +79,7 @@ class Broker extends EventEmitter {
       throw new TypeError('Must pass a valid order instance');
     }
     this.queue.push(order);
+    this._enableBroker();
     return order;
    }
 }

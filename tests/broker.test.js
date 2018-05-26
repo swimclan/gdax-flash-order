@@ -1,6 +1,7 @@
 const Broker = require('../src/broker');
 const Exchange = require('../src/exchange');
 const Order = require('../src/order');
+const { WebsocketClient } = require('gdax');
 
 describe('Broker class testing', () => {
 
@@ -19,6 +20,7 @@ describe('Broker class testing', () => {
     });
 
     test('instance of Broker class will have exchange, order queue and valid properties', () => {
+      expect(broker).toHaveProperty('enabled', false);
       expect(broker).toHaveProperty('queue', []);
       expect(broker).toHaveProperty('exchange');
       expect(broker).toHaveProperty('valid');
@@ -92,6 +94,55 @@ describe('Broker class testing', () => {
 
     test('If a valid order is passed into queueOrder() it will be returned by the function', () => {
       expect(broker.queueOrder(order)).toBe(order);
+    });
+
+    test('If the broker is not enabled when a valid order is passed to queueOrder() then the broker will be enabled', () => {
+      broker.queueOrder(order);
+      expect(broker.enabled).toBe(true);
+    });
+  });
+
+  describe('_enableBroker() and disableBroker() functionality', () => {
+    beforeEach(() => {
+      credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
+      exchange = new Exchange(credentials);
+    });
+    test('running _enableBroker() will set the enable prop to true', () => {
+      expect(exchange.broker._enableBroker()).toBe(true);
+      expect(exchange.broker.enabled).toBe(true);
+    });
+
+    test('running _disableBroker() will set the enable prop to false', () => {
+      expect(exchange.broker._disableBroker()).toBe(true);
+      expect(exchange.broker.enabled).toBe(false);
+    });
+  });
+
+  describe('Test _processQueue() functionality', () => {
+    let credentials, exchange, broker, order;
+    beforeEach(() => {
+      credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
+      exchange = new Exchange(credentials);
+      exchange.broker.queueOrder(new Order({ product: 'ETH-USD', size: 1, market: false, limit: 770.23, side: 'buy' }));
+      exchange.broker.queueOrder(new Order({ product: 'BTC-USD', size: 0.2, market: true, side: 'buy' }));
+    });
+    test('_processQueue() will return false and not run if broker is not enabled', () => {
+      exchange.broker._disableBroker();
+      expect(exchange.broker._processQueue()).toBe(false);
+      expect(exchange.feeds).toEqual({});
+    });
+    
+    test('_processQueue() will iterate over queue and load a feed for orders in a \'created\' state', () => {
+      const order = new Order({ product: 'ETH-BTC', size: 1, market: true, side: 'buy' });
+      order.setStatus('placed');
+      exchange.broker.queueOrder(order);
+      exchange.broker._processQueue();
+      expect(exchange.feeds['ETH-USD']).toBeDefined();
+      expect(exchange.feeds['ETH-USD'] instanceof WebsocketClient).toBe(true);
+      expect(exchange.feeds['BTC-USD']).toBeDefined();
+      expect(exchange.feeds['BTC-USD'] instanceof WebsocketClient).toBe(true);
+      expect(exchange.feeds['ETH-BTC']).not.toBeDefined();
+      expect(exchange.feeds['BCH-USD']).not.toBeDefined();
     });
   });
 });

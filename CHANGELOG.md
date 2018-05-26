@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.9] - 2018-05-25
+### Added
+- Broker enabled and processQueue functions and tests
+
 ## [0.0.8] - 2018-05-24
 ### Added
 - Broker order queue and unit tests

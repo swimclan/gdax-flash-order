@@ -18,7 +18,7 @@ class Exchange extends EventEmitter {
     const key = get(credentials, 'key', null);
     const secret = get(credentials, 'secret', null);
     const passphrase = get(credentials, 'passphrase', null);
-    this.executor =  new AuthenticatedClient(key, secret, passphrase);
+    this.executor =  new AuthenticatedClient(key, secret, passphrase, 'https://api-public.sandbox.gdax.com');
     this.feeds = {};
     this.valid = this._testValid();
     // Test for broker instance for final validity check
@@ -60,8 +60,10 @@ class Exchange extends EventEmitter {
   loadFeed(product) {
     if (!product || typeof product !== 'string' || !utils.validateProduct(product)) {
       throw new TypeError('A valid currency pair signature must be supplied');
+    } else if (this.feeds[product] && this.feeds[product] instanceof WebsocketClient) {
+      return false;
     }
-    this.feeds[product] = new WebsocketClient([product], 'wss://ws-feed.gdax.com', this.executor, { channels: 'ticker' });
+    this.feeds[product] = new WebsocketClient([product], 'wss://ws-feed-public.sandbox.gdax.com', this.executor, { channels: 'ticker' });
     return product;
   }
 
@@ -72,7 +74,9 @@ class Exchange extends EventEmitter {
    * @return {String} Product signature of the currency pair that was successfully closed out
    */
   closeFeed(product) {
-    if (!product || typeof product !== 'string' || !utils.validateProduct(product)) {
+    if (!product) {
+      this.feeds = {};
+    } else if (typeof product !== 'string' || !utils.validateProduct(product)) {
       throw new TypeError('A valid currency pair signature must be supplied');
     }
     delete this.feeds[product];

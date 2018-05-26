@@ -60,6 +60,11 @@ describe('Test Exchange class', () => {
     test('loadFeed() will throw a TypeError if nothing is passed to it', () => {
       expect(() => exchange.loadFeed()).toThrow(TypeError);
     });
+
+    test('loadFeed() will return false and do nothing if there is already a feed on that product', () => {
+      exchange.loadFeed('ETH-USD');
+      expect(exchange.loadFeed('ETH-USD')).toBe(false);
+    });
     
     test('loadFeed() will throw TypeError if anything other than a valid currency pair string is passed in', () => {
       expect(() => exchange.loadFeed('ET-USD')).toThrow(TypeError);
@@ -88,8 +93,11 @@ describe('Test Exchange class', () => {
       credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassPhrase'};
       exchange = new Exchange(credentials);
     });
-    test('closeFeed() will throw a TypeError if nothing is passed to it', () => {
-      expect(() => exchange.closeFeed()).toThrow(TypeError);
+    test('closeFeed() will close all feeds if nothing is passed to it', () => {
+      exchange.loadFeed('ETH-USD');
+      exchange.loadFeed('BTC-USD');
+      exchange.closeFeed();
+      expect(exchange.feeds).toEqual({});
     });
 
     test('closeFeed() will throw if anything other than a valid currency pair signature string is passed to it', () => {
