@@ -21,21 +21,21 @@ class Broker extends EventEmitter {
   /**
    * Test validity of instances of broker class
    * @private
-   * @return {Boolean} Boolean representing the validity of instances of broker
+   * @return {boolean} Boolean representing the validity of instances of broker
    */
   _testValid() {
     return Boolean(
       this.exchange &&
       this.exchange.valid &&
       this.exchange.executor instanceof AuthenticatedClient &&
-      this.exchange.feeds instanceof Object
+      this.exchange.feeds.length === 0
     );
   }
 
   /**
    * A function to disable the broker
    * @private
-   * @return {Boolean} A boolean true when disabling was successful
+   * @return {boolean} A boolean true when disabling was successful
    */
   _disableBroker() {
     this.enabled = false;
@@ -46,7 +46,7 @@ class Broker extends EventEmitter {
   /**
    * A function to enable the broker
    * @private
-   * @return {Boolean} A boolean true when enabling was successful
+   * @return {boolean} A boolean true when enabling was successful
    */
   _enableBroker() {
     this.enabled = true;
@@ -56,7 +56,7 @@ class Broker extends EventEmitter {
    /**
     * A function to process the pending orders in the broker order queue
     * @private
-    * @return {Boolean} A boolean true when process is initiated
+    * @return {boolean} A boolean true when process is initiated
     */
    _processQueue() {
     if (!this.enabled) {

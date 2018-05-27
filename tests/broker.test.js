@@ -129,7 +129,7 @@ describe('Broker class testing', () => {
     test('_processQueue() will return false and not run if broker is not enabled', () => {
       exchange.broker._disableBroker();
       expect(exchange.broker._processQueue()).toBe(false);
-      expect(exchange.feeds).toEqual({});
+      expect(exchange.feeds.length).toBe(0);
     });
     
     test('_processQueue() will iterate over queue and load a feed for orders in a \'created\' state', () => {

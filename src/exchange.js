@@ -1,6 +1,7 @@
 const {AuthenticatedClient, WebsocketClient} = require('gdax');
 const Order = require('./order');
 const Broker = require('./broker');
+const Feeds = require('./feeds');
 const utils = require('./utils');
 const {EventEmitter} = require('events');
 const {get} = require('lodash');
@@ -19,7 +20,7 @@ class Exchange extends EventEmitter {
     const secret = get(credentials, 'secret', null);
     const passphrase = get(credentials, 'passphrase', null);
     this.executor =  new AuthenticatedClient(key, secret, passphrase, 'https://api-public.sandbox.gdax.com');
-    this.feeds = {};
+    this.feeds = new Feeds();
     this.valid = this._testValid();
     // Test for broker instance for final validity check
     this.valid = this._generateBroker();
@@ -28,7 +29,7 @@ class Exchange extends EventEmitter {
   /**
    * Test validity of instances of exchange class
    * @private
-   * @return {Boolean} Boolean representing the validity of instances of exchange
+   * @return {boolean} Boolean representing the validity of instances of exchange
    */
   _testValid() {
     return Boolean(
@@ -37,14 +38,14 @@ class Exchange extends EventEmitter {
       this.executor.secret &&
       this.executor.passphrase &&
       this.executor instanceof AuthenticatedClient &&
-      typeof this.feeds === 'object'
+      this.feeds instanceof Feeds
     );
   }
 
   /**
    * Generate the assigned broker to this exchange instance
    * @private
-   * @return {Boolean} Boolean value that demonstrates if the broker instance generated is valid
+   * @return {boolean} Boolean value that demonstrates if the broker instance generated is valid
    */
   _generateBroker() {
     this.broker = new Broker(this);
@@ -54,8 +55,8 @@ class Exchange extends EventEmitter {
   /**
    * Load a new WebsocketClient to the feeds collection
    * @public
-   * @param {String} product - The product signature of the currency pair feed being loaded
-   * @return {String} Product signature of the currency pair that was successfully loaded
+   * @param {string} product - The product signature of the currency pair feed being loaded
+   * @return {string} Product signature of the currency pair that was successfully loaded
    */
   loadFeed(product) {
     if (!product || typeof product !== 'string' || !utils.validateProduct(product)) {
@@ -63,23 +64,24 @@ class Exchange extends EventEmitter {
     } else if (this.feeds[product] && this.feeds[product] instanceof WebsocketClient) {
       return false;
     }
-    this.feeds[product] = new WebsocketClient([product], 'wss://ws-feed-public.sandbox.gdax.com', this.executor, { channels: 'ticker' });
+    this.feeds.add(product, new WebsocketClient([product], 'wss://ws-feed-public.sandbox.gdax.com', this.executor, { channels: 'ticker' }));
     return product;
   }
 
   /**
    * Close out a loaded feed from the exchange
    * @public
-   * @param {String} product - The product signature of the currency pair feed being closed out
-   * @return {String} Product signature of the currency pair that was successfully closed out
+   * @param {string} product - The product signature of the currency pair feed being closed out
+   * @return {string} Product signature of the currency pair that was successfully closed out
    */
   closeFeed(product) {
     if (!product) {
-      this.feeds = {};
+      this.feeds.clear();
     } else if (typeof product !== 'string' || !utils.validateProduct(product)) {
       throw new TypeError('A valid currency pair signature must be supplied');
+    } else {
+      this.feeds.remove(product);
     }
-    delete this.feeds[product];
     return product;
   }
 

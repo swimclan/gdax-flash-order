@@ -1,5 +1,6 @@
 const { WebsocketClient} = require('gdax');
 const Exchange = require('../src/exchange');
+const Feeds = require('../src/feeds');
 
 describe('Test Exchange class', () => {
   describe('Test Exchange construction', () => {
@@ -16,15 +17,16 @@ describe('Test Exchange class', () => {
 
     test('instances of Exchange class have executor, feeds, broker and valid properties', () => {
       expect(new Exchange({})).toHaveProperty('executor');
-      expect(new Exchange({})).toHaveProperty('feeds', {});
+      expect(new Exchange({})).toHaveProperty('feeds');
       expect(new Exchange({})).toHaveProperty('broker');
       expect(new Exchange({})).toHaveProperty('valid');
     });
 
-    test('intstances of exchange are initialized with an empty feeds object', () => {
+    test('intstances of exchange are initialized with an empty feeds instance', () => {
       const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
       const exchange = new Exchange(credentials);
-      expect(exchange.feeds).toEqual({});
+      expect(exchange.feeds instanceof Feeds).toBe(true);
+      expect(exchange.feeds.length).toBe(0);
     });
 
     test('instances of Exchange are not valid if a credentials object is not passed to it', () => {
@@ -97,7 +99,7 @@ describe('Test Exchange class', () => {
       exchange.loadFeed('ETH-USD');
       exchange.loadFeed('BTC-USD');
       exchange.closeFeed();
-      expect(exchange.feeds).toEqual({});
+      expect(exchange.feeds.length).toBe(0);
     });
 
     test('closeFeed() will throw if anything other than a valid currency pair signature string is passed to it', () => {

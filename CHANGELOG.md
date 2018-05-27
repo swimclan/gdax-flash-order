@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.10] - 2018-05-25
+### Added
+- Feeds and Orderbook class to manage socket feeds and level 1 orderbook for the broker
+
 ## [0.0.9] - 2018-05-25
 ### Added
 - Broker enabled and processQueue functions and tests
