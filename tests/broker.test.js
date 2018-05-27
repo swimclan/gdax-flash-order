@@ -50,14 +50,12 @@ describe('Broker class testing', () => {
   });
 
   describe('Test queueOrder() functionality', () => {
-    let order;
-    let broker;
-    let exchange;
-    let credentials;
+    let order, broker, exchange, credentials, processQueue;
     beforeEach(() => {
       credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
       exchange = new Exchange(credentials);
       broker = new Broker(exchange);
+      processQueue = jest.spyOn(broker, '_processQueue');
       order = new Order({
         product: 'ETH-USD',
         side: 'buy',
@@ -100,20 +98,25 @@ describe('Broker class testing', () => {
       broker.queueOrder(order);
       expect(broker.enabled).toBe(true);
     });
+    
+    test('If a valid order is passed into queueOrder() then the method _processQueue() will be called', () => {
+      broker.queueOrder(order);
+      expect(processQueue).toHaveBeenCalledTimes(1);
+    });
   });
 
-  describe('_enableBroker() and disableBroker() functionality', () => {
+  describe('Test enableBroker() and disableBroker() functionality', () => {
     beforeEach(() => {
       credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
       exchange = new Exchange(credentials);
     });
-    test('running _enableBroker() will set the enable prop to true', () => {
-      expect(exchange.broker._enableBroker()).toBe(true);
+    test('running enableBroker() will set the enable prop to true', () => {
+      expect(exchange.broker.enableBroker()).toBe(true);
       expect(exchange.broker.enabled).toBe(true);
     });
 
-    test('running _disableBroker() will set the enable prop to false', () => {
-      expect(exchange.broker._disableBroker()).toBe(true);
+    test('running disableBroker() will set the enable prop to false', () => {
+      expect(exchange.broker.disableBroker()).toBe(true);
       expect(exchange.broker.enabled).toBe(false);
     });
   });
@@ -127,7 +130,7 @@ describe('Broker class testing', () => {
       exchange.broker.queueOrder(new Order({ product: 'BTC-USD', size: 0.2, market: true, side: 'buy' }));
     });
     test('_processQueue() will return false and not run if broker is not enabled', () => {
-      exchange.broker._disableBroker();
+      exchange.broker.disableBroker();
       expect(exchange.broker._processQueue()).toBe(false);
       expect(exchange.feeds.length).toBe(0);
     });

@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.0.10] - 2018-05-25
+## [0.0.11] - 2018-05-26
+### Added
+- Made enable and disable functions public in Broker
+- Added processQueue invocation in queueOrder with tests
+
+## [0.0.10] - 2018-05-26
 ### Added
 - Feeds and Orderbook class to manage socket feeds and level 1 orderbook for the broker
 
