@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.12] - 2018-05-26
+### Added
+- Removed the requirement for supplying limit or market order types on order creation
+- Added setLimit() function to Order class for the broker to be able to manage the current limit price of any order in the market
+
 ## [0.0.11] - 2018-05-26
 ### Added
 - Made enable and disable functions public in Broker

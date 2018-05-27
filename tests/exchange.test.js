@@ -130,19 +130,16 @@ describe('Test Exchange class', () => {
       knownOrder = new Order({
         product: 'BTC-USD',
         side: 'buy',
-        size: 1,
-        market: true
+        size: 1
       });
       unknownOrder = new Order({
         product: 'BCH-USD',
         side: 'sell',
-        size: 2,
-        limit: 998.50
+        size: 2
       });
       invalidOrder = new Order({
         product: 'BCH-USD',
-        side: 'neutral',
-        limit: 998.50
+        side: 'neutral'
       });
       knownOrder.setId('68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08');
       unknownOrder.setId('1234-invalid-4678');
@@ -246,22 +243,20 @@ describe('Test Exchange class', () => {
       const Order = require('../src/order');
       const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
       exchange = new Exchange(credentials);
-      validMarketOrder = new Order({
-        product: 'BTC-USD',
-        side: 'buy',
-        size: 1,
-        market: true
-      });
       validLimitOrder = new Order({
         product: 'BTC-USD',
         side: 'buy',
-        size: 1,
-        limit: 707.43
+        size: 1
+      });
+      validLimitOrder.setLimit(7323.12);
+      orderNoLimit = new Order({
+        product: 'ETH-USD',
+        side: 'buy',
+        size: 2
       });
       invalidOrder = new Order({
         product: 'BCH-USD',
-        side: 'neutral',
-        limit: 998.50
+        side: 'neutral'
       });
     });
 
@@ -331,20 +326,6 @@ describe('Test Exchange class', () => {
       });
     });
 
-    test('placeOrder() will return a resolved promise if a valid market order is passed to it', () => {
-      expect.assertions(3);
-      const failure = jest.fn();
-      exchange.placeOrder(validMarketOrder).then((order) => {
-        expect(typeof order).toBe('object');
-        expect(order.type).toBe('market');
-        return;
-      }).catch((err) => {
-        failure(err);
-      }).then(() => {
-        expect(failure).toHaveBeenCalledTimes(0);
-      });
-    });
-
     test('placeOrder() will return a resolved promise if a valid limit order is passed to it', () => {
       expect.assertions(3);
       const failure = jest.fn();
@@ -356,6 +337,17 @@ describe('Test Exchange class', () => {
         failure(err);
       }).then(() => {
         expect(failure).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    test('placeOrder() will return a rejected promise if a valid order with no specified limit price is passed to it', () => {
+      expect.assertions(2);
+      const success = jest.fn();
+      exchange.placeOrder(orderNoLimit).then((order) => {
+        success(order);
+      }).catch((err) => {
+        expect(typeof err).toBe('object');
+        expect(success).toHaveBeenCalledTimes(0);
       });
     });
 
@@ -382,31 +374,26 @@ describe('Test Exchange class', () => {
       exchange = new Exchange(credentials);
       invalidOrder = new Order({
         size: 1,
-        side: 'buy',
-        limit: 798.32
+        side: 'buy'
       });
       validOrderWithId = new Order({
         size: 1,
         side: 'buy',
-        limit: 798.32,
         product: 'ETH-USD'
       });
       anotherValidOrderWithId = new Order({
         size: 2.3,
         side: 'sell',
-        limit: 711.09,
         product: 'ETH-USD'
       });
       validOrderNullId = new Order({
         size: 1,
         side: 'buy',
-        limit: 798.32,
         product: 'ETH-USD'
       });
       unknownOrderWithId = new Order({
         size: 1,
         side: 'buy',
-        limit: 798.32,
         product: 'ETH-USD'
       });
     
@@ -525,8 +512,7 @@ describe('Test Exchange class', () => {
         const dupOrder = new Order({
           side: 'buy',
           size: '3.2',
-          product: 'BCH-USD',
-          market: true
+          product: 'BCH-USD'
         });
         dupOrder.setId(orders[0]);
         return exchange.cancelOrder(dupOrder);

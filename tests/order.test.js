@@ -14,11 +14,10 @@ describe('Test Order class', () => {
       expect(order instanceof EventEmitter).toBe(true);
     });
 
-    test('instantiated Order has product, limit, market, size, side, status and valid properties', () => {
+    test('instantiated Order has product, limit, size, side, status and valid properties', () => {
       expect(new Order()).toHaveProperty('id');
       expect(new Order()).toHaveProperty('product');
-      expect(new Order()).toHaveProperty('limit');
-      expect(new Order()).toHaveProperty('market');
+      expect(new Order()).toHaveProperty('limit', null);
       expect(new Order()).toHaveProperty('size');
       expect(new Order()).toHaveProperty('side');
       expect(new Order()).toHaveProperty('status');
@@ -29,8 +28,7 @@ describe('Test Order class', () => {
       const order = new Order({
         product: 'ETH-USD',
         side: 'sell',
-        size: 1,
-        market: true
+        size: 1
       });
       expect(order.id).toBeNull();
     });
@@ -52,32 +50,11 @@ describe('Test Order class', () => {
       expect(order5.valid).toBe(false);
     });
 
-    test('Order instance is not valid if either market or limit is not supplied', () => {
-      const order = new Order({
-        product: 'ETH-USD',
-        side: 'buy',
-        size: 1
-      });
-      expect(order.valid).toBe(false);
-    });
-
-    test('Order instance is not valid if both market or limit are supplied', () => {
-      const order = new Order({
-        product: 'ETH-USD',
-        side: 'buy',
-        size: 1,
-        market: true,
-        limit: 700.00
-      });
-      expect(order.valid).toBe(false);
-    });
-
     test('Order instance is not valid if product id is not well-formed', () => {
       const order = new Order({
         product: 'ETH/USD',
         side: 'buy',
-        size: 1,
-        market: true
+        size: 1
       });
       expect(order.valid).toBe(false);
     });
@@ -86,8 +63,7 @@ describe('Test Order class', () => {
       const order = new Order({
         product: 'ETH-USD',
         side: 'create',
-        size: 1,
-        market: true
+        size: 1
       });
       expect(order.valid).toBe(false);
     });
@@ -96,8 +72,7 @@ describe('Test Order class', () => {
       const order = new Order({
         product: 'ETH-USD',
         side: 'sell',
-        size: 1,
-        limit: 770.00
+        size: 1
       });
       expect(order.valid).toBe(true);
     });
@@ -106,10 +81,45 @@ describe('Test Order class', () => {
       const order = new Order({
         product: 'ETH-USD',
         side: 'sell',
-        size: 1,
-        limit: 770.00
+        size: 1
       });
       expect(order.status).toBe('created');
+    });
+  });
+
+  describe('Test setLimit()', () => {
+    let order;
+    beforeAll(() => {
+      order = new Order({
+        side: 'buy',
+        size: '1.2',
+        product: 'ETH-USD'
+      });
+    });
+    test('Calling setLimit() with no arguments will throw a TypeError', () => {
+      expect(() => order.setLimit()).toThrow(TypeError);
+    });
+
+    test('Calling setLimit() with an argument that is not a number will throw a TypeError', () => {
+      expect(() => order.setLimit('700.11')).toThrow(TypeError);
+      expect(() => order.setLimit([700.11])).toThrow(TypeError);
+      expect(() => order.setLimit(true)).toThrow(TypeError);
+      expect(() => order.setLimit({price: 700.11})).toThrow(TypeError);
+    });
+    
+    test('Calling setLimit() with a number will set the order instance limit property to the passed in number value', () => {
+      order.setLimit(711.11);
+      expect(order.limit).toBe(711.11);
+    });
+
+    test('Calling setLimit() when there is already a number value set to the instance limit property will change the limit property value to the new number', () => {
+      order.setLimit(712.13);
+      order.setLimit(712.14);
+      expect(order.limit).toBe(712.14);
+    });
+
+    test('Calling setLimit() successfully will return boolean true', () => {
+      expect(order.setLimit(713.45)).toBe(true);
     });
   });
 
@@ -119,8 +129,7 @@ describe('Test Order class', () => {
       order = new Order({
         product: 'ETH-USD',
         side: 'sell',
-        size: 1,
-        limit: 770.00
+        size: 1
       });
     });
     test('setId() throws if nothing is passed to it', () => {
@@ -164,8 +173,7 @@ describe('Test Order class', () => {
       order = new Order({
         product: 'ETH-USD',
         side: 'sell',
-        size: 1,
-        limit: 770.00        
+        size: 1     
       });
     });
 
