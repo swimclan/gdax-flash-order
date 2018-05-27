@@ -117,21 +117,19 @@ class Exchange extends EventEmitter {
    * @return {Promise<any>} A promise with the newly placed order object or error object from the executor
    */
   placeOrder(order) {
-    if (order instanceof Order !== true) {
-      return Promise.reject({error: 'Invalid input type.  Input param must be an instance of Order class'});
+    if (order instanceof Order !== true || !order.valid) {
+      return Promise.reject({ error: 'Invalid input type.  Input param must be a valid instance of Order class' });
     }
-    if (!order.valid) {
-      return Promise.reject({error: 'Invalid order. Input order must be valid (order.valid === true)'});
+    if (!order.limit) {
+      return Promise.reject({ error: 'A limit price must be specified on order for placement in the market (See setLimit() on the Order class)' });
     }
     let params = {
       size: order.size,
       side: order.side,
       product_id: order.product
     }
-    params.type = order.market ? 'market' : 'limit';
-    if (params.type === 'limit') {
-      params.price = order.limit
-    }
+    params.type = 'limit';
+    params.price = order.limit;
     return new Promise((resolve, reject) => {
       this.executor.placeOrder(params, (err, response, data) => {
         if (err) {

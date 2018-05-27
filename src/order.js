@@ -19,8 +19,7 @@ class Order extends EventEmitter {
     super(options);
     this.id = null;
     this.product = get(options, 'product', null);
-    this.limit = get(options, 'limit', null);
-    this.market = get(options, 'market', false);
+    this.limit = null;
     this.side = get(options, 'side', null);
     this.size = get(options, 'size', 0);
     this.status = 'created';
@@ -38,8 +37,21 @@ class Order extends EventEmitter {
       && this.side
       && (this.side === 'buy' || this.side === 'sell')
       && this.size
-      && ((this.limit  && !this.market) || (!this.limit && this.market))
     );
+  }
+
+  /**
+   * Assign a limit price to the order instance
+   * @public
+   * @param {number} price - The price to set the order intstance limit property to
+   * @return {boolean} A boolean (true) denoting that the function ran successfully
+   */
+  setLimit(price) {
+    if (!price || typeof price !== 'number') {
+      throw new TypeError('A valid price number must be supplied');
+    }
+    this.limit = price;
+    return true;
   }
 
   /**
