@@ -16,6 +16,45 @@ Gdax.AuthenticatedClient = function(key, secret, passphrase, apiURI, options = {
     return this.connected = state === true;
   }
 
+  this.getProducts = function(callback) {
+    const error = !this.connected ? { message: 'An error occured' } : null;
+    return callback(error, {},
+      [
+        {
+          id: "BTC-USD",
+          base_currency: "BTC",
+          quote_currency: "USD",
+          base_min_size: "0.001",
+          base_max_size: "10000.00",
+          quote_increment: "0.01"
+        },
+        {
+          id: "ETH-USD",
+          base_currency: "ETH",
+          quote_currency: "USD",
+          base_min_size: "0.001",
+          base_max_size: "10000.00",
+          quote_increment: "0.01"
+        },
+        {
+          id: "BCH-USD",
+          base_currency: "BCH",
+          quote_currency: "USD",
+          base_min_size: "0.001",
+          base_max_size: "10000.00",
+          quote_increment: "0.01"
+        },
+        {
+          id: "ETH-BTC",
+          base_currency: "ETH",
+          quote_currency: "BTC",
+          base_min_size: "0.001",
+          base_max_size: "10000.00",
+          quote_increment: "0.001"
+        },
+    ]);
+  }
+
   this.getOrder = function(orderId, callback) {
     if (orderId !== '68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08') {
       return callback({message: 'Invalid orderId supplied.  Order not found.'}, {}, null);

@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.13] - 2018-05-28
+### Added
+- getProducts() wrapper for the GDAX method of retrieving all supported products
+- _loadFeeds() method on exchange class to automatically load all supported product feeds on GDAX
+- Removed _loadFeed() invocation on the broker processQueue() method in lieu of exchange automatically loading all supported product feeds
+
 ## [0.0.12] - 2018-05-27
 ### Added
 - Removed the requirement for supplying limit or market order types on order creation

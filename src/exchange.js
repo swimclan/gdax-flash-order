@@ -53,12 +53,27 @@ class Exchange extends EventEmitter {
   }
 
   /**
+   * A function to load websocket feeds for each supported product on executor exchange (GDAX)
+   * @private
+   * @async
+   * @return {Promise<Array>} A list of products whose feeds were successfully loaded into exchange instance
+   */
+  _loadFeeds() {
+    return new Promise((resolve, reject) => {
+      this.getProducts().then((products) => {
+        products.forEach(product => this._loadFeed(product.id));
+        resolve(products);
+      });
+    });
+  }
+
+  /**
    * Load a new WebsocketClient to the feeds collection
-   * @public
+   * @private
    * @param {string} product - The product signature of the currency pair feed being loaded
    * @return {string} Product signature of the currency pair that was successfully loaded
    */
-  loadFeed(product) {
+  _loadFeed(product) {
     if (!product || typeof product !== 'string' || !utils.validateProduct(product)) {
       throw new TypeError('A valid currency pair signature must be supplied');
     } else if (this.feeds[product] && this.feeds[product] instanceof WebsocketClient) {
@@ -70,11 +85,11 @@ class Exchange extends EventEmitter {
 
   /**
    * Close out a loaded feed from the exchange
-   * @public
+   * @private
    * @param {string} product - The product signature of the currency pair feed being closed out
    * @return {string} Product signature of the currency pair that was successfully closed out
    */
-  closeFeed(product) {
+  _closeFeed(product) {
     if (!product) {
       this.feeds.clear();
     } else if (typeof product !== 'string' || !utils.validateProduct(product)) {
@@ -83,6 +98,23 @@ class Exchange extends EventEmitter {
       this.feeds.remove(product);
     }
     return product;
+  }
+
+  /**
+   * Get the current list of supported products from the executor exchange
+   * @public
+   * @async
+   * @return {Promise<Array>} A promise with the product list array
+   */
+  getProducts() {
+    return new Promise((resolve, reject) => {
+      this.executor.getProducts((err, response, data) => {
+        if (err) {
+          return reject(err);
+        }
+        return resolve(data);
+      });
+    });
   }
 
   /**
