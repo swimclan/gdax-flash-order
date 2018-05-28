@@ -39,7 +39,7 @@ class Broker extends EventEmitter {
    */
   disableBroker() {
     this.enabled = false;
-    this.exchange.closeFeed();
+    this.exchange._closeFeed();
     return true;
   }
 
@@ -50,21 +50,6 @@ class Broker extends EventEmitter {
    */
   enableBroker() {
     this.enabled = true;
-    return true;
-  }
-
-   /**
-    * A function to process the pending orders in the broker order queue
-    * @private
-    * @return {boolean} A boolean true when process is initiated
-    */
-   _processQueue() {
-    if (!this.enabled) {
-      return false;
-    }
-    this.queue
-      .filter(order => order.status === 'created')
-      .map(order => this.exchange.loadFeed(order.product), this);
     return true;
   }
 
@@ -80,7 +65,6 @@ class Broker extends EventEmitter {
     }
     this.queue.push(order);
     !this.enabled && this.enableBroker();
-    this._processQueue();
     return order;
    }
 }

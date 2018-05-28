@@ -53,70 +53,103 @@ describe('Test Exchange class', () => {
     });
   });
 
-  describe('Test loadFeed() functionality', () => {
+  describe('Test _loadFeeds() functionality', () => {
+    let credentials, exchange;
+    beforeEach(() => {
+      credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassPhrase'};
+      exchange = new Exchange(credentials);
+    });
+    test('_loadFeeds() will return a resolved promise with the list of executor products that were successfully loaded', () => {
+      expect.assertions(3);
+      const failure = jest.fn();
+      exchange._loadFeeds().then((products) => {
+        expect(Array.isArray(products)).toBe(true);
+        expect(products[0].id).toBe('BTC-USD');
+        return;
+      }).catch((err) => {
+        failure(err);
+      }).then(() => {
+        expect(failure).toHaveBeenCalledTimes(0);
+      });
+    });
+    test('After _loadFeeds() resolves, the exchange feeds property will contain all feeds for each product on the executor exchange', () => {
+      expect.assertions(5);
+      const failure = jest.fn();
+      exchange._loadFeeds().then((products) => {
+        products.forEach(product => expect(exchange.feeds[product.id] instanceof WebsocketClient).toBe(true));
+        return;
+      }).catch((err) => {
+        failure(err);
+      }).then(() => {
+        expect(failure).toHaveBeenCalledTimes(0);
+      });
+    });
+  });
+
+  describe('Test _loadFeed() functionality', () => {
     let exchange, credentials;
     beforeEach(() => {
       credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassPhrase'};
       exchange = new Exchange(credentials);
     });
-    test('loadFeed() will throw a TypeError if nothing is passed to it', () => {
-      expect(() => exchange.loadFeed()).toThrow(TypeError);
+    test('_loadFeed() will throw a TypeError if nothing is passed to it', () => {
+      expect(() => exchange._loadFeed()).toThrow(TypeError);
     });
 
-    test('loadFeed() will return false and do nothing if there is already a feed on that product', () => {
-      exchange.loadFeed('ETH-USD');
-      expect(exchange.loadFeed('ETH-USD')).toBe(false);
+    test('_loadFeed() will return false and do nothing if there is already a feed on that product', () => {
+      exchange._loadFeed('ETH-USD');
+      expect(exchange._loadFeed('ETH-USD')).toBe(false);
     });
     
-    test('loadFeed() will throw TypeError if anything other than a valid currency pair string is passed in', () => {
-      expect(() => exchange.loadFeed('ET-USD')).toThrow(TypeError);
-      expect(() => exchange.loadFeed(0)).toThrow(TypeError);
-      expect(() => exchange.loadFeed(['ETH-USD'])).toThrow(TypeError);
+    test('_loadFeed() will throw TypeError if anything other than a valid currency pair string is passed in', () => {
+      expect(() => exchange._loadFeed('ET-USD')).toThrow(TypeError);
+      expect(() => exchange._loadFeed(0)).toThrow(TypeError);
+      expect(() => exchange._loadFeed(['ETH-USD'])).toThrow(TypeError);
     });
 
-    test('If a valid currency product string is passed to loadFeed(), feeds collection will have a property for that product string', () => {
-      exchange.loadFeed('ETH-USD');
+    test('If a valid currency product string is passed to _loadFeed(), feeds collection will have a property for that product string', () => {
+      exchange._loadFeed('ETH-USD');
       expect(typeof exchange.feeds['ETH-USD'] !== 'undefined');
     });
 
     test('If a valid currency product string is passed to loadFeed(), the value of that product feed will be an instance of gdax WebsocketClient', () => {
-      exchange.loadFeed('BTC-USD');
+      exchange._loadFeed('BTC-USD');
       expect(exchange.feeds['BTC-USD'] instanceof WebsocketClient).toBe(true);
     });
 
     test('If a valid currency pair string is passed to loadFeed() then the string of the currency pair will be returned by the function', () => {
-      expect(exchange.loadFeed('BCH-USD')).toBe('BCH-USD');
+      expect(exchange._loadFeed('BCH-USD')).toBe('BCH-USD');
     });
   });
 
-  describe('Test closeFeed() functionality', () => {
+  describe('Test _closeFeed() functionality', () => {
     let exchange, credentials;
     beforeEach(() => {
       credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassPhrase'};
       exchange = new Exchange(credentials);
     });
-    test('closeFeed() will close all feeds if nothing is passed to it', () => {
-      exchange.loadFeed('ETH-USD');
-      exchange.loadFeed('BTC-USD');
-      exchange.closeFeed();
+    test('_closeFeed() will close all feeds if nothing is passed to it', () => {
+      exchange._loadFeed('ETH-USD');
+      exchange._loadFeed('BTC-USD');
+      exchange._closeFeed();
       expect(exchange.feeds.length).toBe(0);
     });
 
     test('closeFeed() will throw if anything other than a valid currency pair signature string is passed to it', () => {
-      expect(() => exchange.closeFeed('ET-USD')).toThrow(TypeError);
-      expect(() => exchange.closeFeed(['BCH-USD'])).toThrow(TypeError);
-      expect(() => exchange.closeFeed(12)).toThrow(TypeError);
+      expect(() => exchange._closeFeed('ET-USD')).toThrow(TypeError);
+      expect(() => exchange._closeFeed(['BCH-USD'])).toThrow(TypeError);
+      expect(() => exchange._closeFeed(12)).toThrow(TypeError);
     });
 
     test('If valid currency signature is passed to closeFeed() that currency property will not exist in feeds collection', () => {
-      exchange.loadFeed('ETH-USD');
+      exchange._loadFeed('ETH-USD');
       expect(typeof exchange.feeds['ETH-USD']).not.toBe('undefined');
-      exchange.closeFeed('ETH-USD');
+      exchange._closeFeed('ETH-USD');
       expect(typeof exchange.feeds['ETH-USD']).toBe('undefined');
     });
 
     test('If a valid currency signature is passed to closeFeed() but is not currently a loaded feed, nothing will happen', () => {
-      exchange.closeFeed('BTC-USD');
+      exchange._closeFeed('BTC-USD');
       expect(typeof exchange.feeds['BTC-USD']).toBe('undefined');
     });
   });
@@ -233,6 +266,38 @@ describe('Test Exchange class', () => {
         failure(err);
       }).then(() => {
         expect(failure).toHaveBeenCalledTimes(0);
+      });
+    });
+  });
+
+  describe('Test Exchange getProducts() calls', () => {
+    let exchange, credentials;
+    beforeAll(() => {
+      credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
+      exchange = new Exchange(credentials);
+    });
+    test('Calling getProducts() will return a resolved promise with a list of supported currency pair products', () => {
+      expect.assertions(3);
+      let failure = jest.fn();
+      exchange.getProducts().then((products) => {
+        expect(Array.isArray(products)).toBe(true);
+        expect(products[0].id).toBe('BTC-USD');
+        return;
+      }).catch((err) => {
+        failure(err);
+      }).then((e) => {
+        expect(failure).toHaveBeenCalledTimes(0);
+      });
+    });
+    test('Calling getProducts() will reject if an error occurs at the executor exchange', () => {
+      expect.assertions(2);
+      const success = jest.fn();
+      exchange.executor.connected = false;
+      exchange.getProducts().then((products) => {
+        success(products);
+      }).catch((err) => {
+        expect(typeof err).toBe('object');
+        expect(success).toHaveBeenCalledTimes(0);
       });
     });
   });
