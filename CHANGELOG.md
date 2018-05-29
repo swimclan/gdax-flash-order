@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.14] - 2018-05-28
+### Added
+- Called _loadFeeds() from Exchange constructor to automatically setup all supported feed instances on Exchange startup
+
 ## [0.0.13] - 2018-05-28
 ### Added
 - getProducts() wrapper for the GDAX method of retrieving all supported products

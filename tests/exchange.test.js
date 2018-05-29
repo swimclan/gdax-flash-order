@@ -4,7 +4,11 @@ const Feeds = require('../src/feeds');
 
 describe('Test Exchange class', () => {
   describe('Test Exchange construction', () => {
-
+    let credentials, exchange, loadFeeds;
+    beforeEach(() => {
+      credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
+      exchange = new Exchange(credentials);
+    });
     test('Exchange can be instantiated as an object', () => {
       expect(typeof new Exchange({}) === 'object').toBe(true);
     });
@@ -41,16 +45,18 @@ describe('Test Exchange class', () => {
     });
 
     test('instances of Exchange are valid if supplied credentials object has all authentication props', () => {
-      const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
-      const exchange = new Exchange(credentials);
       expect(exchange.valid).toBe(true);
     });
 
     test('instances of Exchange will have a valid broker instance assigned', () => {
-      const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
-      const exchange = new Exchange(credentials);
       expect(exchange.broker && exchange.broker.valid).toBeTruthy();
     });
+
+    test('Exchange instance constructor will call _loadFeeds() in order to populate exchange with all available socket feeds', () => {
+      expect(exchange.feeds.hasOwnProperty('BTC-USD')).toBe(true);
+      expect(exchange.feeds['BTC-USD'] instanceof WebsocketClient).toBe(true);
+      expect(exchange.feeds.length).toBe(4);
+    }); 
   });
 
   describe('Test _loadFeeds() functionality', () => {
@@ -118,6 +124,7 @@ describe('Test Exchange class', () => {
     });
 
     test('If a valid currency pair string is passed to loadFeed() then the string of the currency pair will be returned by the function', () => {
+      exchange._closeFeed();
       expect(exchange._loadFeed('BCH-USD')).toBe('BCH-USD');
     });
   });

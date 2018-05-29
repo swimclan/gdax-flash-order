@@ -24,6 +24,7 @@ class Exchange extends EventEmitter {
     this.valid = this._testValid();
     // Test for broker instance for final validity check
     this.valid = this._generateBroker();
+    this._loadFeeds();
   }
 
   /**
@@ -79,7 +80,7 @@ class Exchange extends EventEmitter {
     } else if (this.feeds[product] && this.feeds[product] instanceof WebsocketClient) {
       return false;
     }
-    this.feeds.add(product, new WebsocketClient([product], 'wss://ws-feed-public.sandbox.gdax.com', this.executor, { channels: 'ticker' }));
+    this.feeds.add(product, new WebsocketClient([product], 'wss://ws-feed-public.sandbox.gdax.com', this.executor, { channels: ['ticker'] }));
     return product;
   }
 
