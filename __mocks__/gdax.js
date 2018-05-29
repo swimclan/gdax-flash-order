@@ -145,13 +145,15 @@ Gdax.WebsocketClient = function(products=[], uri='wss://test.mock.com', credenti
   this.auth = credentials
   this.socket = {readyState: 0}
   this.channels = get(options, 'channels', []).concat(['heartbeat']);
+  this.products = products;
 
   let tradeId = 100000000;
   // emit fake test messages every 600ms
   whilst(() => tradeId < 100000010, (cb) => {
+    tradeId++;
     this.emit('message', { type: 'ticker',
     sequence: 5560214656,
-    product_id: 'BTC-USD',
+    product_id: this.products[0],
     price: '7155.80000000',
     open_24h: '6604.33000000',
     volume_24h: '18682.08960534',
@@ -162,9 +164,9 @@ Gdax.WebsocketClient = function(products=[], uri='wss://test.mock.com', credenti
     best_ask: '7155.8',
     side: 'buy',
     time: '2018-03-31T16:53:07.051000Z',
-    trade_id: ++tradeId,
+    trade_id: tradeId,
     last_size: '0.10405984' });
-    setTimeout(cb, 600);
+    setTimeout(() => cb(null, tradeId), 600)
   }, (err) => { return; } );
 
   // emit fake test heartbeats every 1s
