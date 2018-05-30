@@ -56,7 +56,26 @@ describe('Test Exchange class', () => {
       expect(exchange.feeds.hasOwnProperty('BTC-USD')).toBe(true);
       expect(exchange.feeds['BTC-USD'] instanceof WebsocketClient).toBe(true);
       expect(exchange.feeds.length).toBe(4);
-    }); 
+    });
+
+    test('Exchange instance feeds will emit at least one message', (done) => {
+      function onMessage(data) {
+        expect(typeof data).toBe('object');
+        expect(data).toHaveProperty('product_id', 'BTC-USD');
+        done();
+      }
+      exchange.feeds['BTC-USD'].on('message', onMessage);
+    });
+
+    test('Exchange instance feeds will emit at least one heartbeat', (done) => {
+      function onHeartbeat(data) {
+        expect(typeof data).toBe('object');
+        expect(data).toHaveProperty('type', 'heartbeat');
+        expect(data).toHaveProperty('product_id', 'BCH-USD');
+        done();
+      }
+      exchange.feeds['BCH-USD'].on('heartbeat', onHeartbeat);
+    });
   });
 
   describe('Test _loadFeeds() functionality', () => {

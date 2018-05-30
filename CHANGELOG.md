@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.15] - 2018-05-29
+### Added
+- Updated mock module for gdax to use ES6 class instead of ES5 constructor functions
+- Added tests for websocket emitting from the feeds property on exchange
+
 ## [0.0.14] - 2018-05-28
 ### Added
 - Called _loadFeeds() from Exchange constructor to automatically setup all supported feed instances on Exchange startup
