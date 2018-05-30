@@ -37,9 +37,8 @@ class Broker extends EventEmitter {
    * @public
    * @return {boolean} A boolean true when disabling was successful
    */
-  disableBroker() {
+  disable() {
     this.enabled = false;
-    this.exchange._closeFeed();
     return true;
   }
 
@@ -48,7 +47,7 @@ class Broker extends EventEmitter {
    * @public
    * @return {boolean} A boolean true when enabling was successful
    */
-  enableBroker() {
+  enable() {
     this.enabled = true;
     return true;
   }
@@ -64,7 +63,7 @@ class Broker extends EventEmitter {
       throw new TypeError('Must pass a valid order instance');
     }
     this.queue.push(order);
-    !this.enabled && this.enableBroker();
+    !this.enabled && this.enable();
     return order;
    }
 }

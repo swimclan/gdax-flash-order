@@ -33,6 +33,11 @@ describe('Test Exchange class', () => {
       expect(exchange.feeds.length).toBe(0);
     });
 
+    test('instances of exchange are not valid if nothing is passed to it', () => {
+      const exchange = new Exchange();
+      expect(exchange.valid).toBe(false);
+    });
+
     test('instances of Exchange are not valid if a credentials object is not passed to it', () => {
       const exchange = new Exchange({});
       expect(exchange.valid).toBe(false);
