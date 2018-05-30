@@ -104,13 +104,13 @@ describe('Broker class testing', () => {
       credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
       exchange = new Exchange(credentials);
     });
-    test('running enableBroker() will set the enable prop to true', () => {
-      expect(exchange.broker.enableBroker()).toBe(true);
+    test('running enable() will set the enable prop to true', () => {
+      expect(exchange.broker.enable()).toBe(true);
       expect(exchange.broker.enabled).toBe(true);
     });
 
-    test('running disableBroker() will set the enable prop to false', () => {
-      expect(exchange.broker.disableBroker()).toBe(true);
+    test('running disable() will set the enable prop to false', () => {
+      expect(exchange.broker.disable()).toBe(true);
       expect(exchange.broker.enabled).toBe(false);
     });
   });

@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.17] - 2018-05-29
+### Added
+- Better enable and disable method names on broker
+- 100% coverage on exchange class
+
+## [0.0.16] - 2018-05-29
+### Added
+- Orderbook and orderbook update methods plus tests
+
 ## [0.0.15] - 2018-05-29
 ### Added
 - Updated mock module for gdax to use ES6 class instead of ES5 constructor functions
