@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.18] - 2018-05-29
+### Added
+- Smarter websocket mocking for unit testing gdax feeds
+- Cleaned up unit test suites that didnt have root describe blocks
+
 ## [0.0.17] - 2018-05-29
 ### Added
 - Better enable and disable method names on broker
