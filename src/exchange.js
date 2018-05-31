@@ -1,5 +1,6 @@
 const {AuthenticatedClient, WebsocketClient} = require('gdax');
 const Order = require('./order');
+const OrderBook = require('./orderBook');
 const Broker = require('./broker');
 const Feeds = require('./feeds');
 const utils = require('./utils');
@@ -21,10 +22,6 @@ class Exchange extends EventEmitter {
     const passphrase = get(credentials, 'passphrase', null);
     this.executor =  new AuthenticatedClient(key, secret, passphrase, 'https://api-public.sandbox.gdax.com');
     this.feeds = new Feeds();
-    this.valid = this._testValid();
-    // Test for broker instance for final validity check
-    this.valid = this._generateBroker();
-    this._loadFeeds();
   }
 
   /**
@@ -39,7 +36,8 @@ class Exchange extends EventEmitter {
       this.executor.secret &&
       this.executor.passphrase &&
       this.executor instanceof AuthenticatedClient &&
-      this.feeds instanceof Feeds
+      this.feeds instanceof Feeds &&
+      this.orderBook.every(book => book instanceof OrderBook)
     );
   }
 
@@ -99,6 +97,28 @@ class Exchange extends EventEmitter {
       this.feeds.remove(product);
     }
     return product;
+  }
+
+  async _makeOrderBook(products) {
+    try {
+      !this.orderBooks && (this.orderBooks = {});
+      products.forEach((product) => {
+        this.orderBooks[product] = new OrderBook(product);
+      })
+    } catch (error) {
+      throw new TypeError('A valid currency pair signature must be supplied');
+    }
+    return Promise.resolve(this.orderBooks);
+  }
+
+  async static build(credentials = {}) {
+    const exchange = new Exchange(credentials);
+    const products = await exchange._loadFeeds();
+    await exchange._makeOrderBook(products);
+    exchange.valid = exchange._testValid();
+    // Test for broker instance for final validity check
+    exchange.valid = exchange._generateBroker();
+    return exchange;
   }
 
   /**
