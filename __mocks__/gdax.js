@@ -155,22 +155,27 @@ class WebsocketClient extends EventEmitter {
 
   broadcastSocket() {
     let tradeId = 100000000;
+    let sequence = 5560338726;
+    let price = 710.20;
+    let volume = 
     // emit fake test messages every 600ms
     whilst(() => tradeId < 100000010, (cb) => {
       tradeId++;
+      sequence++;
+      price += 0.01;
       this.emit('message', { type: 'ticker',
-      sequence: 5560214656,
+      sequence: sequence,
       product_id: this.products[0],
-      price: '715.80000000',
+      price: price.toString(),
       open_24h: '660.33000000',
       volume_24h: '18682.08960534',
       low_24h: '715.80000000',
       high_24h: '720.00000000',
       volume_30d: '592512.25034351',
-      best_bid: '715.14',
-      best_ask: '715.8',
-      side: 'buy',
-      time: '2018-03-31T16:53:07.051000Z',
+      best_bid: (price / 1.0001).toString(),
+      best_ask: (price * 1.0001).toString(),
+      side: tradeId % 2 === 0 ? 'buy' : 'sell',
+      time: new Date().toISOString(),
       trade_id: tradeId,
       last_size: '0.10405984' });
       setTimeout(() => cb(null, tradeId), 200)
@@ -181,9 +186,9 @@ class WebsocketClient extends EventEmitter {
       this.emit('heartbeat', { type: 'heartbeat',
       last_trade_id: tradeId,
       product_id: this.products[0],
-      sequence: 5560338726,
+      sequence: sequence,
       time: new Date().toISOString() });
-      setTimeout(cb, 1000);
+      setTimeout(() => cb(null, tradeId), 200);
     }, (err) => { return; } );
   }
 }

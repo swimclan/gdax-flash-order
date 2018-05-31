@@ -3,6 +3,7 @@ const Exchange = require('../src/exchange');
 const Feeds = require('../src/feeds');
 
 describe('Test Exchange class', () => {
+  
   describe('Test Exchange construction', () => {
     let credentials, exchange, loadFeeds;
     beforeEach(() => {
