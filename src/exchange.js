@@ -37,7 +37,7 @@ class Exchange extends EventEmitter {
       this.executor.passphrase &&
       this.executor instanceof AuthenticatedClient &&
       this.feeds instanceof Feeds &&
-      this.orderBook.every(book => book instanceof OrderBook)
+      this.orderBooks.every(book => book instanceof OrderBook)
     );
   }
 
@@ -99,7 +99,7 @@ class Exchange extends EventEmitter {
     return product;
   }
 
-  async _makeOrderBook(products) {
+  async _makeOrderBooks(products) {
     try {
       !this.orderBooks && (this.orderBooks = {});
       products.forEach((product) => {
@@ -114,7 +114,7 @@ class Exchange extends EventEmitter {
   async static build(credentials = {}) {
     const exchange = new Exchange(credentials);
     const products = await exchange._loadFeeds();
-    await exchange._makeOrderBook(products);
+    await exchange._makeOrderBooks(products);
     exchange.valid = exchange._testValid();
     // Test for broker instance for final validity check
     exchange.valid = exchange._generateBroker();
