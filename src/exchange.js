@@ -111,7 +111,7 @@ class Exchange extends EventEmitter {
     return Promise.resolve(this.orderBooks);
   }
 
-  async static build(credentials = {}) {
+  static async build(credentials = {}) {
     const exchange = new Exchange(credentials);
     const products = await exchange._loadFeeds();
     await exchange._makeOrderBooks(products);
