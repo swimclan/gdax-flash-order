@@ -37,7 +37,7 @@ class Exchange extends EventEmitter {
       this.executor.passphrase &&
       this.executor instanceof AuthenticatedClient &&
       this.feeds instanceof Feeds &&
-      this.orderBooks.every(book => book instanceof OrderBook)
+      Object.values(this.orderBooks).every(book => book instanceof OrderBook)
     );
   }
 
@@ -115,8 +115,10 @@ class Exchange extends EventEmitter {
     const exchange = new Exchange(credentials);
     const products = await exchange._loadFeeds();
     await exchange._makeOrderBooks(products);
+    console.log('testvalid:', exchange._testValid());
     exchange.valid = exchange._testValid();
     // Test for broker instance for final validity check
+    console.log('generatevalid: ', exchange._generateBroker());
     exchange.valid = exchange._generateBroker();
     return exchange;
   }

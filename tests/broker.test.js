@@ -9,9 +9,9 @@ describe('Broker class testing', () => {
     let broker;
     let exchange;
     let credentials;
-    beforeEach(() => {
+    beforeEach(async () => {
       credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
-      exchange = new Exchange(credentials);
+      exchange = await Exchange.build(credentials);
       broker = new Broker(exchange);
     });
     test('instance of broker will be a child of the EventEmitter class', () => {
@@ -51,9 +51,9 @@ describe('Broker class testing', () => {
 
   describe('Test queueOrder() functionality', () => {
     let order, broker, exchange, credentials, processQueue;
-    beforeEach(() => {
+    beforeEach(async () => {
       credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
-      exchange = new Exchange(credentials);
+      exchange = await Exchange.build(credentials);
       broker = new Broker(exchange);
       order = new Order({
         product: 'ETH-USD',
