@@ -4,8 +4,8 @@ const Feeds = require('../src/feeds');
 
 describe('Test Exchange class', () => {
   
-  describe('Test Exchange construction', () => {
-    let credentials, exchange, loadFeeds;
+  describe('Test Exchange construction/build', () => {
+    let credentials, exchange, loadFeeds, dispatchOrderBookUpdater;
     beforeEach(async () => {
       credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
       exchange = await Exchange.build(credentials);
@@ -91,6 +91,12 @@ describe('Test Exchange class', () => {
       }
       exchange.feeds['BCH-USD'].on('heartbeat', onHeartbeat);
     });
+
+    test('Built exchanges will call _dispatchOrderBookUpdater() for each product in the feeds property', async () => {
+      dispatchOrderBookUpdater = jest.spyOn(Exchange.prototype, '_dispatchOrderBookUpdater');
+      exchange = await Exchange.build(credentials);
+      expect(dispatchOrderBookUpdater).toHaveBeenCalledTimes(4);
+    });
   });
 
   describe('Test _loadFeeds() functionality', () => {
@@ -104,7 +110,7 @@ describe('Test Exchange class', () => {
       const failure = jest.fn();
       exchange._loadFeeds().then((products) => {
         expect(Array.isArray(products)).toBe(true);
-        expect(products[0].id).toBe('BTC-USD');
+        expect(products[0]).toBe('BTC-USD');
         return;
       }).catch((err) => {
         failure(err);
@@ -116,7 +122,7 @@ describe('Test Exchange class', () => {
       expect.assertions(5);
       const failure = jest.fn();
       exchange._loadFeeds().then((products) => {
-        products.forEach(product => expect(exchange.feeds[product.id] instanceof WebsocketClient).toBe(true));
+        products.forEach(product => expect(exchange.feeds[product] instanceof WebsocketClient).toBe(true));
         return;
       }).catch((err) => {
         failure(err);
@@ -653,6 +659,43 @@ describe('Test Exchange class', () => {
       }).then((orders) => {
         expect(failure).toHaveBeenCalledTimes(1);
       });
+    });
+  });
+
+  describe('Test _dispatchOrderBookUpdaters() ...', () => {
+    let credentials, exchange;
+    beforeEach(async () => {
+      credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
+      exchange = await Exchange.build(credentials);
+    });
+
+    test('_dispatchOrderBookUpdater() will throw if nothing is passed to it', () => {
+      expect(() => exchange._dispatchOrderBookUpdater()).toThrow(TypeError);
+    });
+
+    test('_dispatchOrderBookUpdater() will throw if anything other than a string is passed in', () => {
+      expect(() => exchange._dispatchOrderBookUpdater({'BTC': 'USD'})).toThrow(TypeError);
+      expect(() => exchange._dispatchOrderBookUpdater(2398)).toThrow(TypeError);
+      expect(() => exchange._dispatchOrderBookUpdater([2398])).toThrow(TypeError);
+      expect(() => exchange._dispatchOrderBookUpdater(false)).toThrow(TypeError);
+    });
+
+    test('_dispatchOrderBookUpdater() will throw if an invalid product signature is passed in', () => {
+      expect(() => exchange._dispatchOrderBookUpdater('BT-CUSD')).toThrow(TypeError);
+      expect(() => exchange._dispatchOrderBookUpdater('ET-BTC')).toThrow(TypeError);
+    });
+
+    test('_dispatchOrderBookUpdater() will return false if a product signature is passed that does not have a correspoding feed in the exchange instance', () => {
+      expect(exchange._dispatchOrderBookUpdater('XBT-EUR')).toBe(false);
+    });
+
+    test('_dispatchOrderBookUpdater() will update the appropriate product orderbook on new messages from feed', (done) => {
+      setTimeout(() => {
+        expect(exchange.orderBooks['BTC-USD'].book.bid).toBe(710.2289771022897);
+        expect(exchange.orderBooks['BTC-USD'].book.ask).toBe(710.3710299999999);
+        done();
+      }, 2100);
+      expect(exchange._dispatchOrderBookUpdater('BTC-USD')).toBe(true);
     });
   });
 });

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.20] - 2018-06-08
+### Added
+- Added dispatch order book updater method to set socket event listeners for order book updates
+
 ## [0.0.19] - 2018-06-06
 ### Added
 - Exchange build method for setting up new exchanges with feeds and data

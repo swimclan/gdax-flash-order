@@ -61,7 +61,7 @@ class Exchange extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.getProducts().then((products) => {
         products.forEach(product => this._loadFeed(product.id));
-        resolve(products);
+        resolve(products.map(product => product.id));
       });
     });
   }
@@ -121,6 +121,7 @@ class Exchange extends EventEmitter {
   /**
    * A static build method to construct intsances of exchange with all relevant data bound
    * @static
+   * @public
    * @async
    * @param {object} credentials - A hash of required credentials for the upstream executor exchange (gdax)
    * @return {Promise<Exchange>} An instance of exchange with all initialized data and socket feeds
@@ -129,9 +130,28 @@ class Exchange extends EventEmitter {
     const exchange = new Exchange(credentials);
     const products = await exchange._loadFeeds();
     await exchange._makeOrderBooks(products);
+    products.forEach(product => exchange._dispatchOrderBookUpdater(product));
     exchange.valid = exchange._testValid();
     exchange.broker = exchange._generateBroker(exchange);
     return exchange;
+  }
+
+  /**
+   * A method to dispatch update handlers for exchange orderbooks based on feed messages
+   * @private
+   * @param {string} product - A valid crypto product signature
+   * @return {boolean} Boolean denoting successful dispatch of update handler
+   */
+  _dispatchOrderBookUpdater(product) {
+    if (!product || typeof product === 'undefined' || typeof product !== 'string' || !utils.validateProduct(product)) {
+      throw new TypeError('A valid crypto product signature must be supplied');
+    } else if (!this.feeds[product]) {
+      return false;
+    }
+    this.feeds[product].on('message', tick => {
+      this.orderBooks[product].update({ bid: Number(tick.best_bid), ask: Number(tick.best_ask) });
+    });
+    return true;
   }
 
   /**
