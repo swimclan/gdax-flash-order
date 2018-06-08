@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.0.19] - 2018-06-06
+### Added
+- Exchange build method for setting up new exchanges with feeds and data
+- Orderbooks property on exchange instance to house live level 1 order books
+
 ## [0.0.18] - 2018-05-29
 ### Added
 - Smarter websocket mocking for unit testing gdax feeds
