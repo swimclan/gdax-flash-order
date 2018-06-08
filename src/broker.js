@@ -28,7 +28,7 @@ class Broker extends EventEmitter {
       this.exchange &&
       this.exchange.valid &&
       this.exchange.executor instanceof AuthenticatedClient &&
-      this.exchange.feeds.length === 0
+      this.exchange.feeds.length > 0
     );
   }
 

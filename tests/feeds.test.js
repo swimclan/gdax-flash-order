@@ -23,6 +23,7 @@ describe('Feeds class testing', () => {
   });
 
   describe('Test _getFeeds() functionality', () => {
+    let feeds, websocketClient, product, emit;
     beforeEach(() => {
       feeds = new Feeds();
       emit = jest.spyOn(feeds, 'emit');
@@ -82,7 +83,7 @@ describe('Feeds class testing', () => {
   });
 
   describe('Test remove() functionality', () => {
-    let feeds, emit, product;
+    let feeds, emit, product, websocketClient;
     beforeEach(() => {
       feeds = new Feeds();
       product = 'ETH-USD';
