@@ -1,5 +1,6 @@
 const {AuthenticatedClient, WebsocketClient} = require('gdax');
 const Order = require('./order');
+const OrderBook = require('./orderBook');
 const Broker = require('./broker');
 const Feeds = require('./feeds');
 const utils = require('./utils');
@@ -21,10 +22,7 @@ class Exchange extends EventEmitter {
     const passphrase = get(credentials, 'passphrase', null);
     this.executor =  new AuthenticatedClient(key, secret, passphrase, 'https://api-public.sandbox.gdax.com');
     this.feeds = new Feeds();
-    this.valid = this._testValid();
-    // Test for broker instance for final validity check
-    this.valid = this._generateBroker();
-    this._loadFeeds();
+    this.valid = false;
   }
 
   /**
@@ -39,7 +37,8 @@ class Exchange extends EventEmitter {
       this.executor.secret &&
       this.executor.passphrase &&
       this.executor instanceof AuthenticatedClient &&
-      this.feeds instanceof Feeds
+      this.feeds instanceof Feeds &&
+      Object.values(this.orderBooks).every(book => book instanceof OrderBook)
     );
   }
 
@@ -48,9 +47,8 @@ class Exchange extends EventEmitter {
    * @private
    * @return {boolean} Boolean value that demonstrates if the broker instance generated is valid
    */
-  _generateBroker() {
-    this.broker = new Broker(this);
-    return this.broker.valid;
+  _generateBroker(exchange) {
+    return new Broker(exchange);
   }
 
   /**
@@ -99,6 +97,41 @@ class Exchange extends EventEmitter {
       this.feeds.remove(product);
     }
     return product;
+  }
+
+  /**
+   * Make orderbook collection
+   * @private
+   * @async
+   * @param {Array} products - A list of product signature strings to build an orderbooks collection with
+   * @return {Promise<any>}
+   */
+  async _makeOrderBooks(products) {
+    try {
+      !this.orderBooks && (this.orderBooks = {});
+      products.forEach((product) => {
+        this.orderBooks[product] = new OrderBook(product);
+      })
+    } catch (error) {
+      return Promise.reject('Something went wrong.  Did you supply an array of valid product signatures?');
+    }
+    return Promise.resolve(this.orderBooks);
+  }
+
+  /**
+   * A static build method to construct intsances of exchange with all relevant data bound
+   * @static
+   * @async
+   * @param {object} credentials - A hash of required credentials for the upstream executor exchange (gdax)
+   * @return {Exchange} An instance of exchange with all initialized data and socket feeds
+   */
+  static async build(credentials = {}) {
+    const exchange = new Exchange(credentials);
+    const products = await exchange._loadFeeds();
+    await exchange._makeOrderBooks(products);
+    exchange.valid = exchange._testValid();
+    exchange.broker = exchange._generateBroker(exchange);
+    return exchange;
   }
 
   /**
