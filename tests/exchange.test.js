@@ -6,25 +6,33 @@ describe('Test Exchange class', () => {
   
   describe('Test Exchange construction', () => {
     let credentials, exchange, loadFeeds;
-    beforeEach(() => {
+    beforeEach(async () => {
       credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
-      exchange = new Exchange(credentials);
+      exchange = await Exchange.build(credentials);
     });
     test('Exchange can be instantiated as an object', () => {
       expect(typeof new Exchange({}) === 'object').toBe(true);
     });
 
+    test('Exchange instantiated without anything passed to it will have null credentials in the executor', () => {
+      const exchange = new Exchange();
+      expect(exchange.executor).toHaveProperty('key', null);
+      expect(exchange.executor).toHaveProperty('passphrase', null);
+      expect(exchange.executor).toHaveProperty('secret', null);
+    });
+
+    test('Exchange can be constructed using .build() static method', async () => {
+      expect(exchange instanceof Exchange).toBe(true);
+    });
+
     test('instances of Exchange class inherit from EventEmitter', () => {
       const {EventEmitter} = require('events');
-      const exchange = new Exchange({});
       expect(exchange instanceof EventEmitter).toBe(true);
     });
 
-    test('instances of Exchange class have executor, feeds, broker and valid properties', () => {
+    test('instances of Exchange class have executor and feeds properties', () => {
       expect(new Exchange({})).toHaveProperty('executor');
       expect(new Exchange({})).toHaveProperty('feeds');
-      expect(new Exchange({})).toHaveProperty('broker');
-      expect(new Exchange({})).toHaveProperty('valid');
     });
 
     test('intstances of exchange are initialized with an empty feeds instance', () => {
@@ -34,8 +42,8 @@ describe('Test Exchange class', () => {
       expect(exchange.feeds.length).toBe(0);
     });
 
-    test('instances of exchange are not valid if nothing is passed to it', () => {
-      const exchange = new Exchange();
+    test('instances of exchange are not valid if nothing is passed to it', async () => {
+      const exchange = await Exchange.build();
       expect(exchange.valid).toBe(false);
     });
 
@@ -58,7 +66,7 @@ describe('Test Exchange class', () => {
       expect(exchange.broker && exchange.broker.valid).toBeTruthy();
     });
 
-    test('Exchange instance constructor will call _loadFeeds() in order to populate exchange with all available socket feeds', () => {
+    test('Exchange build() will call _loadFeeds() in order to populate exchange with all available socket feeds', () => {
       expect(exchange.feeds.hasOwnProperty('BTC-USD')).toBe(true);
       expect(exchange.feeds['BTC-USD'] instanceof WebsocketClient).toBe(true);
       expect(exchange.feeds.length).toBe(4);
@@ -167,7 +175,7 @@ describe('Test Exchange class', () => {
       expect(exchange.feeds.length).toBe(0);
     });
 
-    test('closeFeed() will throw if anything other than a valid currency pair signature string is passed to it', () => {
+    test('_closeFeed() will throw if anything other than a valid currency pair signature string is passed to it', () => {
       expect(() => exchange._closeFeed('ET-USD')).toThrow(TypeError);
       expect(() => exchange._closeFeed(['BCH-USD'])).toThrow(TypeError);
       expect(() => exchange._closeFeed(12)).toThrow(TypeError);
@@ -183,6 +191,32 @@ describe('Test Exchange class', () => {
     test('If a valid currency signature is passed to closeFeed() but is not currently a loaded feed, nothing will happen', () => {
       exchange._closeFeed('BTC-USD');
       expect(typeof exchange.feeds['BTC-USD']).toBe('undefined');
+    });
+  });
+
+  describe('Test _makeOrderBooks() ...', () => {
+    let credentials, exchange;
+    beforeEach(async () => {
+      credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
+      exchange = await Exchange.build(credentials);
+    });
+    test('_makeOrderBooks will return a rejected Promise if anything other than an array is passed', () => {
+      expect.assertions(2);
+      const success = jest.fn();
+      exchange._makeOrderBooks(1234).then((orderbooks) => {
+        return success(orderbooks);
+      }).catch((err) => {
+        expect(typeof err).toBe('string');
+        expect(success).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    test('_makeOrderBooks will return a resolved Promise with a list of newly created orderbooks when passed a valid list of prouct signatures', async () => {
+      const products = await exchange.getProducts()
+      const orderbooks = await exchange._makeOrderBooks(products.map(product => product.id));
+      expect(orderbooks).toEqual(exchange.orderBooks);
+      expect(orderbooks['BTC-USD'].product).toBe('BTC-USD');
+      expect(orderbooks['BTC-USD'].book).toEqual({ bid: 0, ask: 0 });
     });
   });
 
@@ -334,12 +368,12 @@ describe('Test Exchange class', () => {
     });
   });
 
-  describe('Test Exchange placeOrder() calls', () => {
-    let exchange, validOrder, invalidOrder;
-    beforeAll(() => {
+  describe('Test Exchange placeOrder() calls', async () => {
+    let exchange, validOrder, invalidOrder, validLimitOrder, orderNoLimit;
+    beforeAll(async () => {
       const Order = require('../src/order');
       const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
-      exchange = new Exchange(credentials);
+      exchange = await Exchange.build(credentials);
       validLimitOrder = new Order({
         product: 'BTC-USD',
         side: 'buy',
@@ -448,9 +482,9 @@ describe('Test Exchange class', () => {
       });
     });
 
-    test('placeOrder() will return a rejected promise if an error occurs during the async operation (ie no connection)', () => {
+    test('placeOrder() will return a rejected promise if an error occurs during the async operation (ie no connection)', async () => {
       const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
-      downExchange = new Exchange(credentials);
+      const downExchange = await Exchange.build(credentials);
       downExchange.executor._connection(false); // simulate internet connection failure
       const success = jest.fn();
       expect.assertions(2);

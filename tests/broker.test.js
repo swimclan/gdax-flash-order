@@ -100,9 +100,10 @@ describe('Broker class testing', () => {
   });
 
   describe('Test enableBroker() and disableBroker() functionality', () => {
-    beforeEach(() => {
+    let credentials, exchange;
+    beforeEach(async () => {
       credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
-      exchange = new Exchange(credentials);
+      exchange = await Exchange.build(credentials);
     });
     test('running enable() will set the enable prop to true', () => {
       expect(exchange.broker.enable()).toBe(true);
