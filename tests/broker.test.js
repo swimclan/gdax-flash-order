@@ -99,20 +99,67 @@ describe('Broker class testing', () => {
     });
   });
 
-  describe('Test enableBroker() and disableBroker() functionality', () => {
-    let credentials, exchange;
+  describe('placeOrders() functionality ...', async () => {
+    let exchange, broker, credentials, orders, placeOrder, invalidOrder;
+    beforeEach(async () => {
+      credentials = { key: 'myKey', passphrase: 'myPassphrase', secret: 'mySecret' };
+      exchange = await Exchange.build(credentials);
+      broker = new Broker(exchange);
+      orders = [
+        new Order({ side: 'buy', size: 1, product: 'ETH-USD' }),
+        new Order({ side: 'buy', size: 1, product: 'BTC-USD' }),
+        new Order({ side: 'buy', size: 1, product: 'BCH-USD' })
+      ];
+      invalidOrder = new Order({ side: 'neutral', size: 1, product: 'BTC-USD'})
+    });
+    test('When placeOrders() is called, placeOrder() on the exchange will be called for each order in a \'created\' or \'cancelled\' status', async () => {
+      const exchange = await Exchange.build(credentials);
+      const placeOrder = jest.spyOn(exchange, 'placeOrder');
+      const broker = new Broker(exchange);
+      orders[0].setStatus('cancelled');
+      orders.forEach(order => broker.queueOrder(order));
+      await broker.placeOrders();
+      expect(placeOrder).toHaveBeenCalledTimes(3);
+    });
+
+    test('When placeOrders() is called all queued orders in a \'created\' or \'cancelled\' state will get a new id and their status set to \'placed\'', async () => {
+      orders[0].setStatus('cancelled');
+      orders.forEach(order => broker.queueOrder(order));      
+      await broker.placeOrders();
+      expect(broker.queue.every(order => typeof order.id === 'string' && order.status === 'placed')).toBe(true);
+    });
+  });
+
+  describe('Test _getLimitPrice() functionality', () => {
+    let buyOrder, sellOrder, exchange, broker, credentials;
     beforeEach(async () => {
       credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
       exchange = await Exchange.build(credentials);
+      broker = new Broker(exchange);
+      buyOrder = new Order({ side: 'buy', size: 1, product: 'BCH-USD' });
+      sellOrder = new Order({ side: 'sell', size: 1, product: 'BTC-USD' });
+    });
+    test('_getLimitPrice() will return the initial bid price in the orderbook on the correct side', () => {
+      expect(broker._getLimitPrice(buyOrder)).toBe(0);
+      expect(broker._getLimitPrice(sellOrder)).toBe(0);
+    });
+  });
+
+  describe('Test enable() and disable() functionality', () => {
+    let credentials, exchange, broker;
+    beforeEach(async () => {
+      credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
+      exchange = await Exchange.build(credentials);
+      broker = new Broker(exchange);
     });
     test('running enable() will set the enable prop to true', () => {
-      expect(exchange.broker.enable()).toBe(true);
-      expect(exchange.broker.enabled).toBe(true);
+      expect(broker.enable()).toBe(true);
+      expect(broker.enabled).toBe(true);
     });
 
     test('running disable() will set the enable prop to false', () => {
-      expect(exchange.broker.disable()).toBe(true);
-      expect(exchange.broker.enabled).toBe(false);
+      expect(broker.disable()).toBe(true);
+      expect(broker.enabled).toBe(false);
     });
   });
 });

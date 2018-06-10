@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.0] - 2018-06-09
+### Added
+- Removed circular dependency between broker and exchange
+- Added placeOrders method on broker to initiate placing new orders from the queue
+- Updated the mock placeOrder method on gdax with synthetic order data
+- Made a single socket model for all products including updated dispatchOrderBookUpdater to use single socket
+- Updated mock socket client to emit for all products
+- Killed _closeFeeds method because it was stupid
+- Killed Feeds class because it was totally unneeded in a single socket world
+
 ## [0.0.20] - 2018-06-08
 ### Added
 - Added dispatch order book updater method to set socket event listeners for order book updates

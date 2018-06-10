@@ -6,6 +6,19 @@ const {whilst} = require('async');
 
 let orders = ['68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08', 'd0c5340b-6d6c-49d9-b567-48c4bfca13d2'];
 
+function makeid() {
+  var text = "";
+  var possible = "abcdef0123456789";
+  var segSizes = [8, 4, 4, 4, 12];
+  for (var seg = 0; seg < 5; seg++) {
+    for (var i = 0; i < segSizes[seg]; i++) {
+      text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    text += '-';
+  }
+  return text.slice(0, -1);
+}
+
 class AuthenticatedClient {
   constructor(key, secret, passphrase, apiURI, options = {}) {
     this.key = key;
@@ -103,16 +116,16 @@ class AuthenticatedClient {
     switch (params.type) {
       case 'limit':
         return callback(null, {}, {
-          id: 'd0c5340b-6d6c-49d9-b567-48c4bfca13d2',
+          id: makeid(),
           price: '0.10000000',
-          size: '0.01000000',
-          product_id: 'BTC-USD',
-          side: 'buy',
+          size: params.size.toString(),
+          product_id: params.product_id,
+          side: params.side,
           stp: 'dc',
           type: 'limit',
           time_in_force: 'GTC',
           post_only: false,
-          created_at: '2016-12-08T20:02:28.53864Z',
+          created_at: new Date().toISOString(),
           fill_fees: '0.0000000000000000',
           filled_size: '0.00000000',
           executed_value: '0.0000000000000000',
@@ -144,12 +157,12 @@ class AuthenticatedClient {
 }
 
 class WebsocketClient extends EventEmitter {
-  constructor(products=[], uri='wss://test.mock.com', credentials={}, options={}) {
+  constructor(productIDs=[], uri='wss://test.mock.com', credentials={}, options={}) {
     super();
     this.auth = credentials
     this.socket = {readyState: 0}
     this.channels = get(options, 'channels', []).concat(['heartbeat']);
-    this.products = products;
+    this.productIDs = productIDs;
     this.broadcastSocket();
   }
 
@@ -159,35 +172,45 @@ class WebsocketClient extends EventEmitter {
     let price = 710.20;
     let volume = 
     // emit fake test messages every 600ms
-    whilst(() => tradeId < 100000010, (cb) => {
+    whilst(() => tradeId < 100000200, (cb) => {
       tradeId++;
       sequence++;
       price += 0.01;
-      this.emit('message', { type: 'ticker',
-      sequence: sequence,
-      product_id: this.products[0],
-      price: price.toString(),
-      open_24h: '660.33000000',
-      volume_24h: '18682.08960534',
-      low_24h: '715.80000000',
-      high_24h: '720.00000000',
-      volume_30d: '592512.25034351',
-      best_bid: (price / 1.0001).toString(),
-      best_ask: (price * 1.0001).toString(),
-      side: tradeId % 2 === 0 ? 'buy' : 'sell',
-      time: new Date().toISOString(),
-      trade_id: tradeId,
-      last_size: '0.10405984' });
+      this.productIDs.forEach(product => {
+        this.emit('message',
+        {
+          type: 'ticker',
+          sequence: sequence,
+          product_id: product,
+          price: price.toString(),
+          open_24h: '660.33000000',
+          volume_24h: '18682.08960534',
+          low_24h: '715.80000000',
+          high_24h: '720.00000000',
+          volume_30d: '592512.25034351',
+          best_bid: (price / 1.0001).toString(),
+          best_ask: (price * 1.0001).toString(),
+          side: tradeId % 2 === 0 ? 'buy' : 'sell',
+          time: new Date().toISOString(),
+          trade_id: tradeId,
+          last_size: '0.10405984'
+        });
+      });
       setTimeout(() => cb(null, tradeId), 200)
     }, (err) => { return; } );
   
     // emit fake test heartbeats every 1s
-    whilst(() => tradeId < 100000010, (cb) => {
-      this.emit('heartbeat', { type: 'heartbeat',
-      last_trade_id: tradeId,
-      product_id: this.products[0],
-      sequence: sequence,
-      time: new Date().toISOString() });
+    whilst(() => tradeId < 100000200, (cb) => {
+      this.productIDs.forEach(product => {
+        this.emit('heartbeat',
+        {
+          type: 'heartbeat',
+          last_trade_id: tradeId,
+          product_id: product,
+          sequence: sequence,
+          time: new Date().toISOString()
+        });
+      });
       setTimeout(() => cb(null, tradeId), 200);
     }, (err) => { return; } );
   }
