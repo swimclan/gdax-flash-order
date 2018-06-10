@@ -28,8 +28,21 @@ class Broker extends EventEmitter {
       this.exchange &&
       this.exchange.valid &&
       this.exchange.executor instanceof AuthenticatedClient &&
-      this.exchange.feeds.length > 0
+      this.exchange.feeds instanceof WebsocketClient
     );
+  }
+
+
+  /**
+   * A function to get the best limit price according to the current state of the
+   * exchange orderbooks
+   * @private
+   * @param {Order} order - The order about which a current limit price will be determined
+   * @return {number} The price of the best limit order
+   */
+  _getLimitPrice(order) {
+    const currentOrderBook = this.exchange.orderBooks[order.product].book;
+    return currentOrderBook[order.side === 'buy' ? 'bid' : 'ask'];
   }
 
   /**
@@ -58,7 +71,7 @@ class Broker extends EventEmitter {
    * @param {Order} order - The order to be loaded into the order queue
    * @return {Order} Order that was successfully loaded into the order queue 
    */
-   queueOrder(order) {
+  queueOrder(order) {
     if (order instanceof Order !== true || !order.valid) {
       throw new TypeError('Must pass a valid order instance');
     }
@@ -66,6 +79,26 @@ class Broker extends EventEmitter {
     !this.enabled && this.enable();
     return order;
    }
+
+   /**
+    * Place any created orders in the queue into the market
+    * @async
+    * @public
+    * @return {Promise<[Order]>} A list of orders that were placed
+    * 
+    */
+  async placeOrders() {
+    const placedOrders = [];
+    let placedOrder;
+    this.queue.filter(order => order.status === 'created' || order.status === 'cancelled').forEach(async (order) => {
+      order.setLimit(this._getLimitPrice(order));
+      order.valid && (placedOrder = await this.exchange.placeOrder(order));
+      order.setId(placedOrder.id);
+      order.setStatus('placed');
+      placedOrders.push(order);
+    });
+    return placedOrders;
+  }
 }
 
 module.exports = Broker;

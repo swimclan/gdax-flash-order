@@ -2,7 +2,6 @@ const {AuthenticatedClient, WebsocketClient} = require('gdax');
 const Order = require('./order');
 const OrderBook = require('./orderbook');
 const Broker = require('./broker');
-const Feeds = require('./feeds');
 const utils = require('./utils');
 const {EventEmitter} = require('events');
 const {get} = require('lodash');
@@ -21,7 +20,7 @@ class Exchange extends EventEmitter {
     const secret = get(credentials, 'secret', null);
     const passphrase = get(credentials, 'passphrase', null);
     this.executor =  new AuthenticatedClient(key, secret, passphrase, 'https://api-public.sandbox.gdax.com');
-    this.feeds = new Feeds();
+    this.feeds = null
     this.valid = false;
   }
 
@@ -37,18 +36,9 @@ class Exchange extends EventEmitter {
       this.executor.secret &&
       this.executor.passphrase &&
       this.executor instanceof AuthenticatedClient &&
-      this.feeds instanceof Feeds &&
+      this.feeds instanceof WebsocketClient &&
       Object.values(this.orderBooks).every(book => book instanceof OrderBook)
     );
-  }
-
-  /**
-   * Generate the assigned broker to this exchange instance
-   * @private
-   * @return {boolean} Boolean value that demonstrates if the broker instance generated is valid
-   */
-  _generateBroker(exchange) {
-    return new Broker(exchange);
   }
 
   /**
@@ -60,43 +50,11 @@ class Exchange extends EventEmitter {
   _loadFeeds() {
     return new Promise((resolve, reject) => {
       this.getProducts().then((products) => {
-        products.forEach(product => this._loadFeed(product.id));
-        resolve(products.map(product => product.id));
+        const productList = products.map(product => product.id);
+        this.feeds = new WebsocketClient(productList, 'wss://ws-feed-public.sandbox.gdax.com', this.executor, { channels: ['ticker', 'user'] })
+        resolve(productList);
       });
     });
-  }
-
-  /**
-   * Load a new WebsocketClient to the feeds collection
-   * @private
-   * @param {string} product - The product signature of the currency pair feed being loaded
-   * @return {string} Product signature of the currency pair that was successfully loaded
-   */
-  _loadFeed(product) {
-    if (!product || typeof product !== 'string' || !utils.validateProduct(product)) {
-      throw new TypeError('A valid currency pair signature must be supplied');
-    } else if (this.feeds[product] && this.feeds[product] instanceof WebsocketClient) {
-      return false;
-    }
-    this.feeds.add(product, new WebsocketClient([product], 'wss://ws-feed-public.sandbox.gdax.com', this.executor, { channels: ['ticker'] }));
-    return product;
-  }
-
-  /**
-   * Close out a loaded feed from the exchange
-   * @private
-   * @param {string} product - The product signature of the currency pair feed being closed out
-   * @return {string} Product signature of the currency pair that was successfully closed out
-   */
-  _closeFeed(product) {
-    if (!product) {
-      this.feeds.clear();
-    } else if (typeof product !== 'string' || !utils.validateProduct(product)) {
-      throw new TypeError('A valid currency pair signature must be supplied');
-    } else {
-      this.feeds.remove(product);
-    }
-    return product;
   }
 
   /**
@@ -130,9 +88,8 @@ class Exchange extends EventEmitter {
     const exchange = new Exchange(credentials);
     const products = await exchange._loadFeeds();
     await exchange._makeOrderBooks(products);
-    products.forEach(product => exchange._dispatchOrderBookUpdater(product));
+    exchange._dispatchOrderBookUpdater();
     exchange.valid = exchange._testValid();
-    exchange.broker = exchange._generateBroker(exchange);
     return exchange;
   }
 
@@ -142,14 +99,9 @@ class Exchange extends EventEmitter {
    * @param {string} product - A valid crypto product signature
    * @return {boolean} Boolean denoting successful dispatch of update handler
    */
-  _dispatchOrderBookUpdater(product) {
-    if (!product || typeof product === 'undefined' || typeof product !== 'string' || !utils.validateProduct(product)) {
-      throw new TypeError('A valid crypto product signature must be supplied');
-    } else if (!this.feeds[product]) {
-      return false;
-    }
-    this.feeds[product].on('message', tick => {
-      this.orderBooks[product].update({ bid: Number(tick.best_bid), ask: Number(tick.best_ask) });
+  _dispatchOrderBookUpdater() {
+    this.feeds.on('message', tick => {
+      tick.type === 'ticker' && this.orderBooks[tick.product_id].update({ bid: Number(tick.best_bid), ask: Number(tick.best_ask) });
     });
     return true;
   }
@@ -206,7 +158,7 @@ class Exchange extends EventEmitter {
     if (order instanceof Order !== true || !order.valid) {
       return Promise.reject({ error: 'Invalid input type.  Input param must be a valid instance of Order class' });
     }
-    if (!order.limit) {
+    if (typeof order.limit === 'undefined' || order.limit === null) {
       return Promise.reject({ error: 'A limit price must be specified on order for placement in the market (See setLimit() on the Order class)' });
     }
     let params = {

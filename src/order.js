@@ -47,7 +47,7 @@ class Order extends EventEmitter {
    * @return {boolean} A boolean (true) denoting that the function ran successfully
    */
   setLimit(price) {
-    if (!price || typeof price !== 'number') {
+    if (typeof price === 'undefined' || typeof price !== 'number') {
       throw new TypeError('A valid price number must be supplied');
     }
     this.limit = price;

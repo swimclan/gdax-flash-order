@@ -1,6 +1,6 @@
 {
   "name": "gdax-flash-order",
-  "version": "0.0.20",
+  "version": "0.1.0",
   "description": "An algorithmic approach to getting market making orders filled on GDAX cryptocurrency exchange",
   "main": "index.js",
   "scripts": {
