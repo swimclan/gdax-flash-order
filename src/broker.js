@@ -99,6 +99,24 @@ class Broker extends EventEmitter {
     });
     return placedOrders;
   }
+
+  /**
+   * Cancel placed orders whose limit price differs from the best price on the orderbook for that product
+   * @public
+   * @async
+   * @return {Promise<[Order]>} A list of orders that were cancelled
+   */
+  async cancelOrders() {
+    const cancelledOrders = [];
+    this.queue.filter(order => order.status === 'placed').forEach(async (order) => {
+      if (this.exchange.orderBooks[order.product].book[order.side === 'buy' ? 'bid' : 'ask'] !== order.limit) {
+        await this.exchange.cancelOrder(order);
+        order.setStatus('cancelled');
+        cancelledOrders.push(order);
+      }
+    });
+    return cancelledOrders;
+  }
 }
 
 module.exports = Broker;

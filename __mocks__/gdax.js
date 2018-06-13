@@ -5,6 +5,8 @@ const {EventEmitter} = require('events');
 const {whilst} = require('async');
 
 let orders = ['68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08', 'd0c5340b-6d6c-49d9-b567-48c4bfca13d2'];
+let cancelled = [];
+let unknownOrders = ['h4837hf7-19nv-7722-of38-jfq9n2js0knv'];
 
 function makeid() {
   var text = "";
@@ -96,12 +98,15 @@ class AuthenticatedClient {
   }
 
   cancelOrder(orderId, callback) {
-    const targetOrder = orders.indexOf(orderId);
-    if (targetOrder === -1) {
+    const unknownOrder = unknownOrders.indexOf(orderId);
+    if (unknownOrder !== -1 || orderId === null) {
       return callback({message: 'Invalid orderId supplied.  Order not found.'}, {}, null);
     }
-
-    return callback(null, {}, orders.splice(targetOrder, 1));
+    if (cancelled.indexOf(orderId) !== -1) {
+      return callback({message: 'Invalid orderId supplied.  Order already cancelled'}, {}, null);
+    }
+    cancelled.push(orderId);
+    return callback(null, {}, [orderId]);
   }
 
   placeOrder(params, callback) {
