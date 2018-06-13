@@ -128,6 +128,75 @@ describe('Broker class testing', () => {
       await broker.placeOrders();
       expect(broker.queue.every(order => typeof order.id === 'string' && order.status === 'placed')).toBe(true);
     });
+
+    test('placeOrders() will return an array of placed orders upon successful execution', async () => {
+      orders.forEach(order => broker.queueOrder(order));
+      const placedOrders = await broker.placeOrders();
+      expect(Array.isArray(placedOrders)).toBe(true);
+      expect(placedOrders.length).toBe(3);
+      expect(placedOrders.every(order => order instanceof Order)).toBe(true);
+    });
+  });
+
+  describe('Test cancelOrders() functionality ...', () => {
+    let exchange, broker, credentials, orders;
+    beforeEach(async () => {
+      credentials = { key: 'myKey', passphrase: 'myPassphrase', secret: 'mySecret' };
+      exchange = await Exchange.build(credentials);
+      broker = new Broker(exchange);
+      orders = [
+        new Order({ side: 'buy', size: 1, product: 'BTC-USD' }),
+        new Order({ side: 'buy', size: 1, product: 'ETH-USD' }),
+        new Order({ side: 'sell', size: 1, product: 'BCH-USD' })
+      ];
+    });
+    test('When cancelOrders() is called cancelOrder() on exchange instance will get called if the limit price is difference than the orderBook best price', async (done) => {
+      expect.assertions(1);
+      const exchange = await Exchange.build(credentials);
+      const cancelOrder = jest.spyOn(exchange, 'cancelOrder');
+      const broker = new Broker(exchange);
+      orders.forEach(order => broker.queueOrder(order));
+      await broker.placeOrders();
+      setTimeout(() => {
+        broker.cancelOrders().then(() => {
+          expect(cancelOrder).toHaveBeenCalledTimes(3);
+          done();
+        });
+      }, 500);
+    });
+
+    test('When cancelOrders() gets called the orders that are to be cancelled will get a new status of \'cancelled\'', async (done) => {
+      expect.assertions(1);
+      orders.forEach(order => broker.queueOrder(order));
+      await broker.placeOrders();
+      setTimeout(() => {
+        broker.cancelOrders().then(() => {
+          expect(broker.queue.every(order => order.status === 'cancelled')).toBe(true);
+          done();
+        });
+      }, 500);
+    });
+
+    test('cancelOrders() will return an array of cancelled orders upon successful execution', async (done) => {
+      expect.assertions(3);
+      orders.forEach(order => broker.queueOrder(order));
+      await broker.placeOrders();
+      setTimeout(() => {
+        broker.cancelOrders().then((cancelledOrders) => {
+          expect(Array.isArray(cancelledOrders)).toBe(true);
+          expect(cancelledOrders.length).toBe(3);
+          expect(cancelledOrders.every(order => order instanceof Order)).toBe(true);
+          done();
+        });
+      }, 500);
+    });
+
+    test('cancelOrders() will not cancel if the limit price of the order is the same as the current base price on the order book', async () => {
+      orders.forEach(order => broker.queueOrder(order));
+      await broker.placeOrders();
+      await broker.cancelOrders();
+      expect(broker.queue.every(order => order.status === 'placed')).toBe(true);
+    });
   });
 
   describe('Test _getLimitPrice() functionality', () => {

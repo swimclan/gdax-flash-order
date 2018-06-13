@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.1] - 2018-06-12
+### Added
+- Added cancelOrders() method on broker to cancel orders whose limit price differs from the best price on the orderbook
+
 ## [0.1.0] - 2018-06-09
 ### Added
 - Removed circular dependency between broker and exchange
