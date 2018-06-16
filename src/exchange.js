@@ -7,7 +7,8 @@ const {EventEmitter} = require('events');
 const {get} = require('lodash');
 
 /**
- * A class representing an exchange 
+ * A class representing an exchange
+ * @extends {EventEmitter}
  */
 class Exchange extends EventEmitter {
   /**
@@ -45,7 +46,7 @@ class Exchange extends EventEmitter {
    * A function to load websocket feeds for each supported product on executor exchange (GDAX)
    * @private
    * @async
-   * @return {Promise<Array>} A list of products whose feeds were successfully loaded into exchange instance
+   * @return {Promise<string[]>} A list of products whose feeds were successfully loaded into exchange instance
    */
   _loadFeeds() {
     return new Promise((resolve, reject) => {
@@ -62,7 +63,7 @@ class Exchange extends EventEmitter {
    * @private
    * @async
    * @param {Array} products - A list of product signature strings to build an orderbooks collection with
-   * @return {Promise<any>}
+   * @return {Promise<Orderbook[]>}
    */
   async _makeOrderBooks(products) {
     try {
@@ -110,7 +111,7 @@ class Exchange extends EventEmitter {
    * Get the current list of supported products from the executor exchange
    * @public
    * @async
-   * @return {Promise<Array>} A promise with the product list array
+   * @return {Promise<Object[]>} A promise with the product list array
    */
   getProducts() {
     return new Promise((resolve, reject) => {
@@ -128,7 +129,7 @@ class Exchange extends EventEmitter {
    * @public
    * @async
    * @param {Order} order - The order instance of the order being requested from the executor
-   * @return {Promise<any>} A promise with the order data object or error from executor
+   * @return {Promise<Object[]>} A promise with the order data object or error from executor
    */
   getOrder(order) {
     if (order instanceof Order !== true) {
@@ -152,7 +153,7 @@ class Exchange extends EventEmitter {
    * @public
    * @async
    * @param {Order} order - The order instance of the order to be placed on the upstream executor
-   * @return {Promise<any>} A promise with the newly placed order object or error object from the executor
+   * @return {Promise<Object[]>} A promise with the newly placed order object or error object from the executor
    */
   placeOrder(order) {
     if (order instanceof Order !== true || !order.valid) {
@@ -183,7 +184,7 @@ class Exchange extends EventEmitter {
    * @public
    * @async
    * @param {Order} order - The order instance to be cancelled on the upstream executor
-   * @return {Promise<any[]>} A promise with an array of length one containing the id of the order cancelled on the upstream exchange
+   * @return {Promise<string[]>} A promise with an array of length one containing the id of the order cancelled on the upstream exchange
    */
   cancelOrder(order) {
     if (order instanceof Order !== true) {

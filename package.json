@@ -1,10 +1,10 @@
 {
   "name": "gdax-flash-order",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "An algorithmic approach to getting market making orders filled on GDAX cryptocurrency exchange",
   "main": "index.js",
   "scripts": {
-    "test": "node node_modules/.bin/jest --coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
+    "test": "node node_modules/.bin/jest --coverage --runInBand && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
   },
   "repository": {
     "type": "git",

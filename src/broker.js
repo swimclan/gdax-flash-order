@@ -84,7 +84,7 @@ class Broker extends EventEmitter {
     * Place any created orders in the queue into the market
     * @async
     * @public
-    * @return {Promise<[Order]>} A list of orders that were placed
+    * @return {Promise<Order[]]>} A list of orders that were placed
     * 
     */
   async placeOrders() {
@@ -104,7 +104,7 @@ class Broker extends EventEmitter {
    * Cancel placed orders whose limit price differs from the best price on the orderbook for that product
    * @public
    * @async
-   * @return {Promise<[Order]>} A list of orders that were cancelled
+   * @return {Promise<Order[]]>} A list of orders that were cancelled
    */
   async cancelOrders() {
     const cancelledOrders = [];
