@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2018-06-16
+### Added
+- Dispatch engine processes
+- Initial filled order handler
+- Guards agains zero value limit order price
+
 ## [0.1.2] - 2018-06-16
 ### Added
 - Added Engine class for iterating order processes

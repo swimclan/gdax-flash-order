@@ -293,7 +293,7 @@ describe('Test Exchange class', () => {
   });
 
   describe('Test Exchange placeOrder() calls', async () => {
-    let exchange, validOrder, invalidOrder, validLimitOrder, orderNoLimit;
+    let exchange, invalidOrder, validLimitOrder, orderNoLimit, zeroDollarOrder;
     beforeAll(async () => {
       const Order = require('../src/order');
       const credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
@@ -313,6 +313,12 @@ describe('Test Exchange class', () => {
         product: 'BCH-USD',
         side: 'neutral'
       });
+      zeroDollarOrder = new Order({
+        product: 'BTC-USD',
+        side: 'buy',
+        size: 1        
+      });
+      zeroDollarOrder.setLimit(0);
     });
 
     test('placeOrder() call will return a rejected promise if a string is passed to it', () => {
@@ -399,6 +405,17 @@ describe('Test Exchange class', () => {
       expect.assertions(2);
       const success = jest.fn();
       exchange.placeOrder(orderNoLimit).then((order) => {
+        success(order);
+      }).catch((err) => {
+        expect(typeof err).toBe('object');
+        expect(success).toHaveBeenCalledTimes(0);
+      });
+    });
+
+    test('placeOrder() will return a rejected promise of a valid order with a limit price of zero is passed to it', () => {
+      expect.assertions(2);
+      const success = jest.fn();
+      exchange.placeOrder(zeroDollarOrder).then((order) => {
         success(order);
       }).catch((err) => {
         expect(typeof err).toBe('object');
@@ -588,10 +605,10 @@ describe('Test Exchange class', () => {
 
     test('_dispatchOrderBookUpdater() will update the appropriate product orderbook on new messages from feed', (done) => {
       setTimeout(() => {
-        expect(exchange.orderBooks['BTC-USD'].book.bid).toBe(710.2389761023898);
-        expect(exchange.orderBooks['BTC-USD'].book.ask).toBe(710.3810309999999);
+        expect(exchange.orderBooks['BTC-USD'].book.bid).toBe(710.1889811018898);
+        expect(exchange.orderBooks['BTC-USD'].book.ask).toBe(710.331026);
         done();
-      }, 2100);
+      }, 1200);
       expect(exchange._dispatchOrderBookUpdater('BTC-USD')).toBe(true);
     });
   });

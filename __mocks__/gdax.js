@@ -120,7 +120,7 @@ class AuthenticatedClient {
 
     switch (params.type) {
       case 'limit':
-        return callback(null, {}, {
+        const placedOrder = {
           id: makeid(),
           price: '0.10000000',
           size: params.size.toString(),
@@ -136,7 +136,8 @@ class AuthenticatedClient {
           executed_value: '0.0000000000000000',
           status: 'pending',
           settled: false
-        });
+        };
+        return callback(null, {}, placedOrder);
         break;
       case 'market':
         return callback(null, {}, {
@@ -175,13 +176,13 @@ class WebsocketClient extends EventEmitter {
     let tradeId = 100000000;
     let sequence = 5560338726;
     let price = 710.20;
-    let volume = 
-    // emit fake test messages every 600ms
+
+    // emit fake test messages every 200ms
     whilst(() => tradeId < 100000200, (cb) => {
       tradeId++;
       sequence++;
-      price += 0.01;
-      this.productIDs.forEach(product => {
+      price += 0.01;  
+      this.productIDs.forEach((product, i) => {
         this.emit('message',
         {
           type: 'ticker',
@@ -200,6 +201,22 @@ class WebsocketClient extends EventEmitter {
           trade_id: tradeId,
           last_size: '0.10405984'
         });
+        if (i === this.productIDs.length - 1) {
+          this.emit('message',
+          {
+            type: 'done',
+            side: 'buy',
+            order_id: makeid(),
+            reason: 'filled',
+            product_id: product,
+            price: '6534.02000000',
+            remaining_size: '0.00000000',
+            sequence: 27914079,
+            user_id: '565e2e39d74c2f42f0000083',
+            profile_id: 'b42d9b04-b26a-4871-95be-dd9960ea770a',
+            time: new Date().toISOString() 
+          });
+        }
       });
       setTimeout(() => cb(null, tradeId), 200)
     }, (err) => { return; } );
@@ -216,7 +233,7 @@ class WebsocketClient extends EventEmitter {
           time: new Date().toISOString()
         });
       });
-      setTimeout(() => cb(null, tradeId), 200);
+      setTimeout(() => cb(null, tradeId), 1000);
     }, (err) => { return; } );
   }
 }
