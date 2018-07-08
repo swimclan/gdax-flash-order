@@ -20,7 +20,7 @@ class Exchange extends EventEmitter {
     const key = get(credentials, 'key', null);
     const secret = get(credentials, 'secret', null);
     const passphrase = get(credentials, 'passphrase', null);
-    this.executor =  new AuthenticatedClient(key, secret, passphrase, 'https://api-public.sandbox.gdax.com');
+    this.executor =  new AuthenticatedClient(key, secret, passphrase, 'https://api-public.sandbox.pro.coinbase.com');
     this.feeds = null
     this.valid = false;
   }
@@ -52,7 +52,7 @@ class Exchange extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.getProducts().then((products) => {
         const productList = products.map(product => product.id);
-        this.feeds = new WebsocketClient(productList, 'wss://ws-feed-public.sandbox.gdax.com', this.executor, { channels: ['ticker', 'user'] })
+        this.feeds = new WebsocketClient(productList, 'wss://ws-feed-public.sandbox.pro.coinbase.com', this.executor, { channels: ['ticker', 'user'] })
         resolve(productList);
       });
     });
@@ -161,6 +161,9 @@ class Exchange extends EventEmitter {
     }
     if (typeof order.limit === 'undefined' || order.limit === null) {
       return Promise.reject({ error: 'A limit price must be specified on order for placement in the market (See setLimit() on the Order class)' });
+    }
+    if (order.limit <= 0) {
+      return Promise.reject({ error: 'A limit price must be greater than 0 in the target currency' });
     }
     let params = {
       size: order.size,

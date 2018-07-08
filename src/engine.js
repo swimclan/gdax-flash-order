@@ -74,8 +74,8 @@ class Engine {
    * @return {boolean} A boolean denoting if the processes were successfully executed
    */
   _executeProcesses(processes) {
-    processes.forEach(process => {
-      process.fn.apply(process.context, process.args)
+    processes.forEach(async process => {
+      await process.fn.apply(process.context, process.args)
     });
   }
 }

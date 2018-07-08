@@ -1,6 +1,7 @@
 const Broker = require('../src/broker');
 const Exchange = require('../src/exchange');
 const Order = require('../src/order');
+const Engine = require('../src/engine');
 const { WebsocketClient } = require('gdax');
 
 describe('Broker class testing', () => {
@@ -23,7 +24,16 @@ describe('Broker class testing', () => {
       expect(broker).toHaveProperty('enabled', false);
       expect(broker).toHaveProperty('queue', []);
       expect(broker).toHaveProperty('exchange');
+      expect(broker).toHaveProperty('engine');
       expect(broker).toHaveProperty('valid');
+    });
+
+    test('initialized broker will have an Engine instance assigned to its engine property', () => {
+      expect(broker.engine instanceof Engine).toBe(true);
+    });
+
+    test('initialized broker will have the assigned engine set to 100ms timing', () => {
+      expect(broker.engine.timing).toBe(100);
     });
 
     test('initialized broker instance order queue will initialize as an array of length 0', () => {
@@ -93,9 +103,120 @@ describe('Broker class testing', () => {
       expect(broker.queueOrder(order)).toBe(order);
     });
 
-    test('If the broker is not enabled when a valid order is passed to queueOrder() then the broker will be enabled', () => {
+    test('If the broker is not enabled when a valid order is passed to queueOrder() and default silent option is left false, then the broker will be enabled', () => {
       broker.queueOrder(order);
       expect(broker.enabled).toBe(true);
+    });
+
+    test('If the silent option is set to true, queueOrder() will not enable the broker', () => {
+      broker.queueOrder(order, true);
+      expect(broker.enabled).toBe(false);
+    });
+  });
+
+  describe('Test _processQueue() functionality ...', () => {
+    let exchange, credentials, broker;
+    beforeEach(async () => {
+      credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
+      exchange = await Exchange.build(credentials);
+      broker = new Broker(exchange);
+    });
+    test('_processQueue() will call _dispatchFilledOrderHandler()', async () => {
+      const exchange = await Exchange.build(credentials);
+      const broker = new Broker(exchange);
+      const dispatchHandler = jest.spyOn(broker, '_dispatchFilledOrderHandler');
+      broker._processQueue();
+      expect(dispatchHandler).toHaveBeenCalledTimes(1);
+    });
+    test('_processQueue() will start the broker engine', async () => {
+      exchange = await Exchange.build(credentials);
+      broker = new Broker(exchange);
+      const engineStart = jest.spyOn(broker.engine, 'start');
+      broker._processQueue();
+      expect(engineStart).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Test _checkFilled() functionality', () => {
+    let exchange, credentials, broker, order;
+    beforeEach(async () => {
+      credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
+      exchange = await Exchange.build(credentials);
+      broker = new Broker(exchange);
+      order = new Order({ side: 'buy', product: 'BTC-USD', size: 1 });
+      order.setStatus('placed');
+      order.setLimit(6534.23);
+      order.setId('d50ec984-77a8-460a-b958-66f114b0de9b');
+    });
+    test('_checkFilled() will not change the queued order\'s status if the data.type of the incoming message is not \'done\'', () => {
+      broker.queueOrder(order, true);
+      const open = {
+          type: 'open',
+          time: '2018-11-07T08:19:27.028459Z',
+          product_id: 'BTC-USD',
+          sequence: 10,
+          order_id: 'd50ec984-77a8-460a-b958-66f114b0de9b',
+          price: '200.2',
+          remaining_size: '1.00',
+          side: 'sell'
+        }
+      broker._checkFilled(open);
+      expect(order).toHaveProperty('status', 'placed');
+    });
+    test('_checkFilled() will set the queued order\'s status to \'filled\' if the incoming message is \'done\' with a reason of \'filled\'', () => {
+      broker.queueOrder(order, true);
+      const filled = {
+          type: 'done',
+          time: '2018-11-07T08:19:27.028459Z',
+          product_id: 'BTC-USD',
+          sequence: 10,
+          price: '200.2',
+          order_id: 'd50ec984-77a8-460a-b958-66f114b0de9b',
+          reason: 'filled',
+          side: 'sell',
+          remaining_size: '0'
+        }
+      broker._checkFilled(filled);
+      expect(order).toHaveProperty('status', 'filled');
+    });
+
+    test('_checkFilled() will not set the queued order\'s status if the data.type is \'done\' but the reason is not \'filled\'', () => {
+      broker.queueOrder(order, true);
+      order.setStatus('cancelled');
+      const cancelled = {
+          type: 'done',
+          time: '2018-11-07T08:19:27.028459Z',
+          product_id: 'BTC-USD',
+          sequence: 10,
+          price: '200.2',
+          order_id: 'd50ec984-77a8-460a-b958-66f114b0de9b',
+          reason: 'cancelled',
+          side: 'sell',
+          remaining_size: '0'
+        }
+      broker._checkFilled(cancelled);
+      expect(order).toHaveProperty('status', 'cancelled');
+    });
+  });
+
+  describe('_dispatchFilledOrderHandler() functionality ...', () =>{
+    let exchange, credentials, broker, order;
+    beforeEach(async () => {
+      credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
+      exchange = await Exchange.build(credentials);
+      broker = new Broker(exchange);
+      order = new Order({ side: 'buy', size: 1, product: 'BTC-USD' });
+      order.setLimit(6534.77);
+    });
+    test('_dispatchFilledOrderHandler() will execute _checkFilled() when messages from exchange feeds that are not of type ticker are received', async (done) => {
+      exchange = await Exchange.build(credentials);
+      broker = new Broker(exchange);
+      const checkFilled = jest.spyOn(broker, '_checkFilled');
+      broker._dispatchFilledOrderHandler();
+      setTimeout(() => {
+        expect(checkFilled).toHaveBeenCalledTimes(1);
+        done();
+      }, 400);
     });
   });
 
@@ -114,23 +235,26 @@ describe('Broker class testing', () => {
     });
     test('When placeOrders() is called, placeOrder() on the exchange will be called for each order in a \'created\' or \'cancelled\' status', async () => {
       const exchange = await Exchange.build(credentials);
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
       const placeOrder = jest.spyOn(exchange, 'placeOrder');
       const broker = new Broker(exchange);
       orders[0].setStatus('cancelled');
-      orders.forEach(order => broker.queueOrder(order));
+      orders.forEach(order => broker.queueOrder(order, true));
       await broker.placeOrders();
       expect(placeOrder).toHaveBeenCalledTimes(3);
     });
 
     test('When placeOrders() is called all queued orders in a \'created\' or \'cancelled\' state will get a new id and their status set to \'placed\'', async () => {
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
       orders[0].setStatus('cancelled');
-      orders.forEach(order => broker.queueOrder(order));      
+      orders.forEach(order => broker.queueOrder(order, true));      
       await broker.placeOrders();
       expect(broker.queue.every(order => typeof order.id === 'string' && order.status === 'placed')).toBe(true);
     });
 
     test('placeOrders() will return an array of placed orders upon successful execution', async () => {
-      orders.forEach(order => broker.queueOrder(order));
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
+      orders.forEach(order => broker.queueOrder(order, true));
       const placedOrders = await broker.placeOrders();
       expect(Array.isArray(placedOrders)).toBe(true);
       expect(placedOrders.length).toBe(3);
@@ -155,7 +279,8 @@ describe('Broker class testing', () => {
       const exchange = await Exchange.build(credentials);
       const cancelOrder = jest.spyOn(exchange, 'cancelOrder');
       const broker = new Broker(exchange);
-      orders.forEach(order => broker.queueOrder(order));
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
+      orders.forEach(order => broker.queueOrder(order, true));
       await broker.placeOrders();
       setTimeout(() => {
         broker.cancelOrders().then(() => {
@@ -167,7 +292,8 @@ describe('Broker class testing', () => {
 
     test('When cancelOrders() gets called the orders that are to be cancelled will get a new status of \'cancelled\'', async (done) => {
       expect.assertions(1);
-      orders.forEach(order => broker.queueOrder(order));
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
+      orders.forEach(order => broker.queueOrder(order, true));
       await broker.placeOrders();
       setTimeout(() => {
         broker.cancelOrders().then(() => {
@@ -179,7 +305,8 @@ describe('Broker class testing', () => {
 
     test('cancelOrders() will return an array of cancelled orders upon successful execution', async (done) => {
       expect.assertions(3);
-      orders.forEach(order => broker.queueOrder(order));
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
+      orders.forEach(order => broker.queueOrder(order, true));
       await broker.placeOrders();
       setTimeout(() => {
         broker.cancelOrders().then((cancelledOrders) => {
@@ -192,7 +319,8 @@ describe('Broker class testing', () => {
     });
 
     test('cancelOrders() will not cancel if the limit price of the order is the same as the current base price on the order book', async () => {
-      orders.forEach(order => broker.queueOrder(order));
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
+      orders.forEach(order => broker.queueOrder(order, true));
       await broker.placeOrders();
       await broker.cancelOrders();
       expect(broker.queue.every(order => order.status === 'placed')).toBe(true);
