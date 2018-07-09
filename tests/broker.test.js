@@ -32,8 +32,8 @@ describe('Broker class testing', () => {
       expect(broker.engine instanceof Engine).toBe(true);
     });
 
-    test('initialized broker will have the assigned engine set to 100ms timing', () => {
-      expect(broker.engine.timing).toBe(100);
+    test('initialized broker will have the assigned engine set to 20ms timing', () => {
+      expect(broker.engine.timing).toBe(20);
     });
 
     test('initialized broker instance order queue will initialize as an array of length 0', () => {
