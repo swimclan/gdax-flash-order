@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.2.0] - 2018-06-16
+## [0.2.1] - 2018-07-08
+### Added
+- Increased engine speed to 20ms
+- Guard against multiple order placements due to race condition with faster engine
+
+## [0.2.0] - 2018-07-08
 ### Added
 - Dispatch engine processes
 - Initial filled order handler

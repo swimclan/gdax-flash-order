@@ -17,7 +17,7 @@ class Broker extends EventEmitter {
     this.exchange = exchange;
     this.enabled = false;
     this.queue = [];
-    this.engine = new Engine(100);
+    this.engine = new Engine(20);
     this.valid = this._testValid();
   }
 
@@ -136,21 +136,21 @@ class Broker extends EventEmitter {
   async placeOrders() {
     const placedOrders = [];
     let placedOrder;
-    try {
     this.queue.filter(order => order.status === 'created' || order.status === 'cancelled').forEach(async (order) => {
       const bestLimit = this._getLimitPrice(order);
       if (bestLimit <= 0) { return []; }
-      order.setLimit(bestLimit);
-      order.valid && (placedOrder = await this.exchange.placeOrder(order));
-      order.setId(placedOrder.id);
       order.setStatus('placed');
-      placedOrders.push(order);
+      order.setLimit(bestLimit);
+      try {
+        order.valid && (placedOrder = await this.exchange.placeOrder(order));
+        order.setId(placedOrder.id);
+        placedOrders.push(order);
+      } catch (e) {
+        order.setStatus('created');
+        return e;
+      }
     });
     return placedOrders;
-    } catch (e) {
-      return e;
-    }
-
   }
 
   /**
@@ -161,18 +161,19 @@ class Broker extends EventEmitter {
    */
   async cancelOrders() {
     const cancelledOrders = [];
-    try {
     this.queue.filter(order => order.status === 'placed').forEach(async (order) => {
       if (this.exchange.orderBooks[order.product].book[order.side === 'buy' ? 'bid' : 'ask'] !== order.limit) {
-        await this.exchange.cancelOrder(order);
         order.setStatus('cancelled');
-        cancelledOrders.push(order);
+        try {
+          await this.exchange.cancelOrder(order);
+          cancelledOrders.push(order);
+        } catch (e) {
+          order.setStatus('placed');
+          return e;
+        }
       }
     });
     return cancelledOrders;
-    } catch (e) {
-      return e;
-    }
   }
 }
 
