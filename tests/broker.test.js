@@ -163,20 +163,21 @@ describe('Broker class testing', () => {
       broker._checkFilled(open);
       expect(order).toHaveProperty('status', 'placed');
     });
-    test('_checkFilled() will set the queued order\'s status to \'filled\' if the incoming message is \'done\' with a reason of \'filled\'', () => {
+    test('_checkFilled() will set the queued order\'s status to \'filled\' if the incoming message is \'match\' with a size equivalent to the remaining order size', () => {
       broker.queueOrder(order, true);
-      const filled = {
-          type: 'done',
-          time: '2018-11-07T08:19:27.028459Z',
-          product_id: 'BTC-USD',
-          sequence: 10,
-          price: '200.2',
-          order_id: 'd50ec984-77a8-460a-b958-66f114b0de9b',
-          reason: 'filled',
-          side: 'sell',
-          remaining_size: '0'
-        }
-      broker._checkFilled(filled);
+      const matched = {
+        type: 'match',
+        trade_id: 10,
+        sequence: 50,
+        maker_order_id: 'd50ec984-77a8-460a-b958-66f114b0de9b',
+        taker_order_id: '132fb6ae-456b-4654-b4e0-d681ac05cea1',
+        time: '2018-11-07T08:19:27.028459Z',
+        product_id: 'BTC-USD',
+        size: 1,
+        price: 400.23,
+        side: 'sell'
+    }
+      broker._checkFilled(matched);
       expect(order).toHaveProperty('status', 'filled');
     });
 
@@ -208,7 +209,7 @@ describe('Broker class testing', () => {
       order = new Order({ side: 'buy', size: 1, product: 'BTC-USD' });
       order.setLimit(6534.77);
     });
-    test('_dispatchFilledOrderHandler() will execute _checkFilled() when messages from exchange feeds that are not of type ticker are received', async (done) => {
+    test('_dispatchFilledOrderHandler() will execute _checkFilled() when messages from exchange feeds that are of type \'match\' are received', async (done) => {
       exchange = await Exchange.build(credentials);
       broker = new Broker(exchange);
       const checkFilled = jest.spyOn(broker, '_checkFilled');

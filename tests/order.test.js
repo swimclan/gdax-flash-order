@@ -19,6 +19,7 @@ describe('Test Order class', () => {
       expect(new Order()).toHaveProperty('product');
       expect(new Order()).toHaveProperty('limit', null);
       expect(new Order()).toHaveProperty('size');
+      expect(new Order()).toHaveProperty('remaining');
       expect(new Order()).toHaveProperty('side');
       expect(new Order()).toHaveProperty('status');
       expect(new Order()).toHaveProperty('valid');
@@ -31,6 +32,15 @@ describe('Test Order class', () => {
         size: 1
       });
       expect(order.id).toBeNull();
+    });
+
+    test('Orders will have a remaining property that is equal to the size supplied when order is instantiated', () => {
+      const order = new Order({
+        side: 'buy',
+        size: 1,
+        product: 'BTC_USD'
+      });
+      expect(order).toHaveProperty('remaining', 1);
     });
 
     test('Order instance is not valid if product, size, and side are not supplied', () => {
@@ -162,7 +172,7 @@ describe('Test Order class', () => {
     });
 
     test('setId() returns a string representing the newly assigned order id', () => {
-      expect(order.setId('1234-5678-abcde')).toBe('1234-5678-abcde');
+      expect(order.setId('1234-5678-abcde')).toBe(true);
     });
   });
 
@@ -197,13 +207,49 @@ describe('Test Order class', () => {
       expect(() => order.setStatus(true)).toThrow(TypeError);
     });
 
-    test('setStatus() throws if something other than created, placed, filled, or cancelled is supplied to it', () => {
+    test('setStatus() throws if something other than created, placed, partial, filled, or cancelled is supplied to it', () => {
       expect(() => order.setStatus('deleted')).toThrow(TypeError);
     });
 
     test('order status is set on order if valid string is passed to setStatus()', () => {
-      order.setStatus('filled');
-      expect(order.status).toBe('filled');
+      order.setStatus('partial');
+      expect(order.status).toBe('partial');
+    });
+
+    test('setStatus() returns true if successfully executed', () => {
+      expect(order.setStatus('filled')).toBe(true);
+    });
+  });
+
+  describe('setRemaining functionality testing ...', () => {
+    let order;
+    beforeEach(() => {
+      order = new Order({
+        side: 'buy',
+        size: 1,
+        product: 'BTC-USD'
+      });
+    });
+    test('setRemaining() will throw if nothing is passed to it', () => {
+      expect(() => order.setRemaining()).toThrow(TypeError);
+    });
+
+    test('setRemaining() will throw if something other than a number is passed to it', () => {
+      expect(() => order.setRemaining('23')).toThrow(TypeError);
+      expect(() => order.setRemaining([23])).toThrow(TypeError);
+    });
+    
+    test('setRemaining() will throw if a negative number is passed to it', () => {
+      expect(() => order.setRemaining(-23)).toThrow(TypeError);
+    });
+
+    test('setRemaining() will update the remaining property if a valid positive number is supplied', () => {
+      order.setRemaining(0.2343);
+      expect(order.remaining).toEqual(0.2343);
+    });
+
+    test('setRemaining() will return the true if executed successfully', () => {
+      expect(order.setRemaining(0.9382)).toBe(true);
     });
   });
 });

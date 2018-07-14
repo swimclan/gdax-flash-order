@@ -166,7 +166,7 @@ class Exchange extends EventEmitter {
       return Promise.reject({ error: 'A limit price must be greater than 0 in the target currency' });
     }
     let params = {
-      size: order.size,
+      size: order.remaining,
       side: order.side,
       product_id: order.product
     }

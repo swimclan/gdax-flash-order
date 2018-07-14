@@ -202,6 +202,20 @@ class WebsocketClient extends EventEmitter {
           last_size: '0.10405984'
         });
         if (i === this.productIDs.length - 1) {
+          const filledOrderId = makeid();
+          this.emit('message',
+          {
+            type: 'match',
+            trade_id: 10,
+            sequence: 50,
+            maker_order_id: filledOrderId,
+            taker_order_id: '132fb6ae-456b-4654-b4e0-d681ac05cea1',
+            time: new Date().toISOString(),
+            product_id: product,
+            size: 5.23512,
+            price: 6534.02000000,
+            side: 'sell'
+          });
           this.emit('message',
           {
             type: 'done',
