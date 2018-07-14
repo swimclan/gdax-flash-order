@@ -13,6 +13,7 @@ class Engine {
   constructor(timing=10000) {
     this.timing = timing;
     this.started = false;
+    this.processes = [];
   }
 
   /**
@@ -20,12 +21,10 @@ class Engine {
    @public
    @return {boolean} A boolean value denoting the successful execution of the engine start
    */
-  start(processes) {
-    if (typeof processes === 'undefined' || !processes) {
-      return false;
-    }
+  start(processes=[]) {
+    processes.length && !this.processes.length && (this.processes = processes);
     this.started = true;
-    this._run(processes);
+    this._run();
     return true;
   }
 
@@ -55,11 +54,11 @@ class Engine {
    * @return {boolean} A boolean denoting the successful dispatching of the iterator
    * 
    */
-  _run(processes) {
+  _run() {
     setTimeout(() => {
       if (this.started) {
-        this._executeProcesses(processes);
-        this._run(processes);
+        this._executeProcesses();
+        this._run();
       } else {
         this._noop();
       }
@@ -73,8 +72,8 @@ class Engine {
    * @param {function[]} processes - A list of process functions to be called
    * @return {boolean} A boolean denoting if the processes were successfully executed
    */
-  _executeProcesses(processes) {
-    processes.forEach(async process => {
+  _executeProcesses() {
+    this.processes.forEach(async process => {
       await process.fn.apply(process.context, process.args)
     });
   }

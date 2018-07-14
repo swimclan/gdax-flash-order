@@ -22,6 +22,7 @@ class Order extends EventEmitter {
     this.limit = null;
     this.side = get(options, 'side', null);
     this.size = get(options, 'size', 0);
+    this.remaining = this.size;
     this.status = 'created';
     this.valid = this._testValid();
   }
@@ -64,22 +65,37 @@ class Order extends EventEmitter {
     if (typeof orderid !== 'string') {
       throw new TypeError('Type of orderid must be string');
     }
-    return this.id = orderid;
+    this.id = orderid;
+    return true;
   }
 
   /**
    * @public
-   * @param {string} status = A string representing the status to set on the order instance
+   * @param {string} status - A string representing the status to set on the order instance
    * @return {string} The updated order status
    */
   setStatus(status) {
-    const validStatuses = ['created', 'filled', 'cancelled', 'placed'];
+    const validStatuses = ['created', 'partial', 'filled', 'cancelled', 'placed'];
     if (typeof status !== 'string') {
       throw new TypeError('Type of order status must be a string');
     } else if (validStatuses.indexOf(status) === -1) {
-      throw new TypeError('Order status must be one of either \'created\', \'filled\', \'cancelled\' or \'placed\'');
+      throw new TypeError('Order status must be one of either \'created\', \'partial\', \'filled\', \'cancelled\' or \'placed\'');
     }
-    return this.status = status;
+    this.status = status;
+    return true;
+  }
+
+  /**
+   * @public
+   * @param {number} size - The remaining size of the order to be filled
+   * @return {numnber} The updated size
+   */
+  setRemaining(size) {
+    if (typeof size === 'undefined' || typeof size !== 'number' || size < 0) {
+      throw new TypeError('A size must be supplied and must be a valid positive number');
+    }
+    this.remaining = size;
+    return true;
   }
 }
 

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.2] - 2018-07-13
+### Added
+- Support for partially filled orders
+
 ## [0.2.1] - 2018-07-08
 ### Added
 - Increased engine speed to 20ms

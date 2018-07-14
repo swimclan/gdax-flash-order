@@ -15,6 +15,7 @@ describe('Engine class testing', () => {
     test('Engine class will have a timing and started property on new instances', () => {
       expect(engine).toHaveProperty('timing', 10000);
       expect(engine).toHaveProperty('started', false);
+      expect(engine).toHaveProperty('processes', []);
     });
     test('Engine class instances will have a custom timing value if it is passed into constructor', () => {
       const engine = new Engine(20000);
@@ -32,8 +33,9 @@ describe('Engine class testing', () => {
     test('start() will return a boolean true when called', () => {
       expect(engine.start([process])).toEqual(true);
     });
-    test('start() will return false if nothing is passed to it', () => {
-      expect(engine.start()).toBe(false);
+    test('if nothing is passed to start(), an empty processes array will be assigned to processes property', () => {
+      engine.start();
+      expect(engine.processes).toEqual([]);
     });
     test('If start() is called with a list of valid processes they will all be called', (done) => {
       engine.start([process]);

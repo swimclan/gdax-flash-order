@@ -106,10 +106,14 @@ class Broker extends EventEmitter {
     */
    _checkFilled(message) {
      this.queue.forEach(order => {
-      if (message.type === 'done' && message.reason === 'filled' && message.order_id === order.id && parseInt(message.remaining_size) === 0) {
-        order.setStatus('filled');
+      let {size, maker_order_id} = message;
+      if (maker_order_id === order.id) {
+        const remaining = order.remaining - Number(size);
+        remaining > 0 && order.setRemaining(remaining) && order.setStatus('partial');
+        remaining === 0 && order.setRemaining(remaining) && order.setStatus('filled');
       }
      });
+    return true;
    }
 
    /**
@@ -119,7 +123,7 @@ class Broker extends EventEmitter {
     */
    _dispatchFilledOrderHandler() {
     this.exchange.feeds.on('message', (data) => {
-      if (data.type !== 'ticker') {
+      if (data.type === 'match') {
         this._checkFilled(data);
       }
     });
@@ -161,7 +165,7 @@ class Broker extends EventEmitter {
    */
   async cancelOrders() {
     const cancelledOrders = [];
-    this.queue.filter(order => order.status === 'placed').forEach(async (order) => {
+    this.queue.filter(order => order.status === 'placed' || order.status === 'partial').forEach(async (order) => {
       if (this.exchange.orderBooks[order.product].book[order.side === 'buy' ? 'bid' : 'ask'] !== order.limit) {
         order.setStatus('cancelled');
         try {
