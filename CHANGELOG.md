@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.3] - 2018-07-19
+### Added
+- Level 2 Order book capabiity
+
 ## [0.2.2] - 2018-07-13
 ### Added
 - Support for partially filled orders
