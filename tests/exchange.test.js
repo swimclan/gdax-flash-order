@@ -4,7 +4,7 @@ const Exchange = require('../src/exchange');
 describe('Test Exchange class', () => {
   
   describe('Test Exchange construction/build', () => {
-    let credentials, exchange, loadFeeds, dispatchOrderBookUpdater;
+    let credentials, exchange, dispatchOrderBookUpdater;
     beforeEach(async () => {
       credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase'};
       exchange = await Exchange.build(credentials);
@@ -77,12 +77,6 @@ describe('Test Exchange class', () => {
       }
       exchange.feeds.on('heartbeat', onHeartbeat);
     });
-
-    test('Built exchanges will call _dispatchOrderBookUpdater() once and only once', async () => {
-      dispatchOrderBookUpdater = jest.spyOn(Exchange.prototype, '_dispatchOrderBookUpdater');
-      exchange = await Exchange.build(credentials);
-      expect(dispatchOrderBookUpdater).toHaveBeenCalledTimes(1);
-    });
   });
 
   describe('Test _loadFeeds() functionality', () => {
@@ -140,7 +134,7 @@ describe('Test Exchange class', () => {
       const orderbooks = await exchange._makeOrderBooks(products.map(product => product.id));
       expect(orderbooks).toEqual(exchange.orderBooks);
       expect(orderbooks['BTC-USD'].product).toBe('BTC-USD');
-      expect(orderbooks['BTC-USD'].book).toEqual({ bid: 0, ask: 0 });
+      expect(orderbooks['BTC-USD'].book).toEqual({ bid: {}, ask: {} });
     });
   });
 
@@ -596,20 +590,98 @@ describe('Test Exchange class', () => {
     });
   });
 
-  describe('Test _dispatchOrderBookUpdaters() ...', () => {
+  describe('Test _dispatchOrderBookUpdater() ...', () => {
+    let credentials, exchange, dispatchOrderBookUpdater;
+    beforeEach(async () => {
+      credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
+      dispatchOrderBookUpdater = jest.spyOn(Exchange.prototype, '_dispatchOrderBookUpdater');
+      exchange = await Exchange.build(credentials);
+    });
+    test('dispatchOrderBookUpdater() will be called once when exchange is built', () => {
+      expect(dispatchOrderBookUpdater).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Test _loadL2Snapshot() ...', () => {
     let credentials, exchange;
     beforeEach(async () => {
       credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
       exchange = await Exchange.build(credentials);
     });
+    test('_loadL2Snapshot() will throw TypeError if no arguments are passed in', () => {
+      expect(() => exchange._loadL2Snapshot()).toThrow(TypeError);
+    });
 
-    test('_dispatchOrderBookUpdater() will update the appropriate product orderbook on new messages from feed', (done) => {
-      setTimeout(() => {
-        expect(exchange.orderBooks['BTC-USD'].book.bid).toBe(710.1889811018898);
-        expect(exchange.orderBooks['BTC-USD'].book.ask).toBe(710.331026);
-        done();
-      }, 1200);
-      expect(exchange._dispatchOrderBookUpdater('BTC-USD')).toBe(true);
+    test('_loadL2Snapshot() will throw if anything other than an object is passed in', () => {
+      expect(() => exchange._loadL2Snapshot('snapshot')).toThrow(TypeError);
+    });
+
+    test('_loadL2Snapshot() will throw if a message with a type other than \'snapshot\' is passed in', () => {
+      expect(() => exchange._loadL2Snapshot({ type: 'ticker', price: '34.23' })).toThrow(TypeError);
+    });
+
+    test('_loadL2Snapshot() will load all the bids and asks from the message into the exchange orderbook', () => {
+      const message = {
+        type: 'snapshot',
+        product_id: 'BTC-USD',
+        bids: [['6500.11', '0.45054140'], ['6500.12', '1.387292']],
+        asks: [['6500.15', '0.57753524'], ['6500.16', '10.2900928']]
+      };
+      exchange._loadL2Snapshot(message);
+      expect(exchange.orderBooks['BTC-USD'].getPrice(6500.12)).toEqual({side: 'bid', size: 1.387292, price: 6500.12});
+    });
+
+    test('_loadL2Snapshot() will return true if successfully executed', () => {
+      const message = {
+        type: 'snapshot',
+        product_id: 'BTC-USD',
+        bids: [['6500.11', '0.45054140'], ['6500.12', '1.387292']],
+        asks: [['6500.15', '0.57753524'], ['6500.16', '10.2900928']]
+      };
+      expect(exchange._loadL2Snapshot(message)).toBe(true);
     });
   });
+
+  describe('Test _updateOrderBook() functionality ...', () => {
+    let credentials, exchange;
+    beforeEach(async () => {
+      credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
+      exchange = await Exchange.build(credentials);
+    });
+    test('_updateOrderBook() will throw TypeError if nothing is passed in', () => {
+      expect(() => exchange._updateOrderBook()).toThrow(TypeError);
+    });
+
+    test('_updateOrderBook() will throw TypeError if something other than a plain object is passed in', () => {
+      expect(() => exchange._updateOrderBook('orders')).toThrow(TypeError);
+    });
+
+    test('_updateOrderBook() will throw TypeError if a message with a type other than \'l2update\' is passed in', () => {
+      expect(() => exchange._updateOrderBook({ type: 'match', price: '2500.23' })).toThrow(TypeError);
+    });
+
+    test('_updateOrderBook() will update the exchange orderbook with new bids and asks', () => {
+      const snapshot = {
+        type: 'snapshot',
+        product_id: 'BTC-USD',
+        bids: [['6500.11', '0.45054140'], ['6500.12', '1.387292']],
+        asks: [['6500.15', '0.57753524'], ['6500.16', '10.2900928']]
+      };
+      exchange._loadL2Snapshot(snapshot);
+      expect(exchange.orderBooks['BTC-USD'].getPrice(6500.11)).toEqual({ price: 6500.11, size:  0.45054140, side: 'bid'});
+      const message = {
+        type: 'l2update',
+        product_id: 'BTC-USD',
+        changes: [
+          ['buy', '6500.11', '0.84702376'],
+          ['sell', '6507.00', '1.88933140'],
+          ['sell', '6505.54', '1.12386524'],
+          ['sell', '6504.38', '0']
+        ]
+      };
+      exchange._updateOrderBook(message);
+      expect(exchange.orderBooks['BTC-USD'].getPrice(6500.11)).toEqual({ price: 6500.11, size:  0.84702376, side: 'bid'});
+    });
+  });
+
 });

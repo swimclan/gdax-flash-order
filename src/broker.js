@@ -1,4 +1,5 @@
 const {EventEmitter} = require('events');
+const {get} = require('lodash');
 const {AuthenticatedClient, WebsocketClient} = require('gdax');
 const Order = require('./order');
 const Engine = require('./engine');
@@ -44,8 +45,10 @@ class Broker extends EventEmitter {
    * @return {number} The price of the best limit order
    */
   _getLimitPrice(order) {
-    const currentOrderBook = this.exchange.orderBooks[order.product].book;
-    return currentOrderBook[order.side === 'buy' ? 'bid' : 'ask'];
+    const currentOrderBook = this.exchange.orderBooks[order.product];
+    const bestPrices = currentOrderBook.getBestPrices();
+    const side = order.side === 'buy' ? 'bid' : 'ask';
+    return get(bestPrices, `${side}.price`, 0);
   }
 
   /**
@@ -166,7 +169,7 @@ class Broker extends EventEmitter {
   async cancelOrders() {
     const cancelledOrders = [];
     this.queue.filter(order => order.status === 'placed' || order.status === 'partial').forEach(async (order) => {
-      if (this.exchange.orderBooks[order.product].book[order.side === 'buy' ? 'bid' : 'ask'] !== order.limit) {
+      if (this._getLimitPrice(order) !== order.limit) {
         order.setStatus('cancelled');
         try {
           await this.exchange.cancelOrder(order);

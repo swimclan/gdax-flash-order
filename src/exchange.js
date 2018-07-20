@@ -1,8 +1,6 @@
 const {AuthenticatedClient, WebsocketClient} = require('gdax');
 const Order = require('./order');
-const OrderBook = require('./orderbook');
-const Broker = require('./broker');
-const utils = require('./utils');
+const OrderBookL2 = require('./orderbookL2');
 const {EventEmitter} = require('events');
 const {get} = require('lodash');
 
@@ -38,7 +36,7 @@ class Exchange extends EventEmitter {
       this.executor.passphrase &&
       this.executor instanceof AuthenticatedClient &&
       this.feeds instanceof WebsocketClient &&
-      Object.values(this.orderBooks).every(book => book instanceof OrderBook)
+      Object.values(this.orderBooks).every(book => book instanceof OrderBookL2)
     );
   }
 
@@ -52,7 +50,7 @@ class Exchange extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.getProducts().then((products) => {
         const productList = products.map(product => product.id);
-        this.feeds = new WebsocketClient(productList, 'wss://ws-feed-public.sandbox.pro.coinbase.com', this.executor, { channels: ['ticker', 'user'] })
+        this.feeds = new WebsocketClient(productList, 'wss://ws-feed-public.sandbox.pro.coinbase.com', this.executor, { channels: ['user', 'level2'] })
         resolve(productList);
       });
     });
@@ -69,7 +67,7 @@ class Exchange extends EventEmitter {
     try {
       !this.orderBooks && (this.orderBooks = {});
       products.forEach((product) => {
-        this.orderBooks[product] = new OrderBook(product);
+        this.orderBooks[product] = new OrderBookL2(product);
       })
     } catch (error) {
       return Promise.reject('Something went wrong.  Did you supply an array of valid product signatures?');
@@ -101,9 +99,49 @@ class Exchange extends EventEmitter {
    * @return {boolean} Boolean denoting successful dispatch of update handler
    */
   _dispatchOrderBookUpdater() {
-    this.feeds.on('message', tick => {
-      tick.type === 'ticker' && this.orderBooks[tick.product_id].update({ bid: Number(tick.best_bid), ask: Number(tick.best_ask) });
+    this.feeds.on('message', message => {
+      switch(message.type) {
+        case 'snapshot':
+          this._loadL2Snapshot(message);
+          break;
+        case 'l2update':
+          this._updateOrderBook(message);
+      }
     });
+    return true;
+  }
+
+  /**
+   * A method to parse the snapshot message from level 2 and update the exchange orderbook with all bids and asks
+   * @private
+   * @param {object} message - The incoming message object from the level2 channel of the socket feed
+   * @return {boolean} Boolean denoting the successful update of the level 2 order book on exchange instance
+   */
+  _loadL2Snapshot(message) {
+    if (typeof message === 'undefined' || !message || typeof message !== 'object') {
+      throw new TypeError('A valid message object must be passed to _loadL2Snapshot()');
+    }
+    if (!message.type || message.type !== 'snapshot') {
+      throw new TypeError('A message of type snapshot must be passed to _loadL2Snapshot()');
+    }
+    this.orderBooks[message.product_id].init(message);
+    return true;
+  }
+
+  /**
+   * A method to update a single price on the level 2 order book based on the level 2 updates on socket feed
+   * @private
+   * @param {object} message - The incoming message object from the level2 channel of the socket feed
+   * @return {boolean} A Boolean denoting successful execution of the method
+   */
+  _updateOrderBook(message) {
+    if (!message || typeof message === 'udefined' || typeof message !== 'object') {
+      throw new TypeError('A valid message object must be passed in to _updateOrderBook()');
+    }
+    if (!message.type || message.type !== 'l2update') {
+      throw new TypeError('A message of type \'l2update\' is required for _updateOrderBook()');
+    }
+    this.orderBooks[message.product_id].update(message);
     return true;
   }
 

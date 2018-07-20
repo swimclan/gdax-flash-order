@@ -12,7 +12,7 @@ describe('Test L2 Orderbook class', () => {
       const ethereum = 'ETH-USD';
       orderbook = new Orderbook(ethereum);
       expect(orderbook).toHaveProperty('product', ethereum);
-      expect(orderbook).toHaveProperty('book', { bid: {}, ask: {}});
+      expect(orderbook).toHaveProperty('book', { bids: [], asks: []});
     });
 
     test('sets the product property to the string passed to the constructor.', () => {
@@ -23,46 +23,123 @@ describe('Test L2 Orderbook class', () => {
     });
   });
 
-  describe('L2 Orderbook update method... ', () => {
+  describe('L2 Orderbook init() method... ', () => {
     let orderbook;
     beforeEach(() => {
       orderbook = new Orderbook('BTC-USD');
     });
 
-    test('takes an object with bid and ask objects that have price/volume key value pairs and updates the orderbook.', () => {
-      const params = { bid: { 12: 12.34 }, ask: { 15: 123.45 } };
-      orderbook.update(params);
-      expect(orderbook.book).toEqual(params);
+    test('init() will throw a TypeError if nothing is passed to it', () => {
+      expect(() => orderbook.init()).toThrow(TypeError);
     });
 
-    test('takes an object with only a bid object as a parameter and updates the orderbook.', () => {
-      const params = { bid: { 12: 34 } };
-      orderbook.update(params);
-      expect(orderbook.book).toEqual({ bid: { 12: 34 }, ask: {} });
+    test('init() will throw a TypeError if something other than an object is passed to it', () => {
+      expect(() => orderbook.init('prices and things')).toThrow(TypeError);
     });
 
-    test('takes an object with only an ask property as a parameter and updates the orderbook.', () => {
-      const params = { ask: { 12: 34 } };
-      orderbook.update(params);
-      expect(orderbook.book).toEqual({ bid: {}, ask: { 12: 34 } });
+    test('init() will throw a TypeError if a message object is passed in whose type property is not \'snapshot\'', () => {
+      const invalidMessage = {
+        type: 'l2update',
+        product_id: 'BTC-USD',
+        changes: [
+            ['buy', '6500.09', '0.84702376'],
+            ['sell', '6507.00', '1.88933140'],
+            ['sell', '6505.54', '1.12386524'],
+            ['sell', '6504.38', '0']
+        ]
+      };
+      expect(() => orderbook.init(invalidMessage)).toThrow(TypeError);
     });
 
-    test('throws an error if ask is not an object', () => {
-      expect(() => {
-        orderbook.update({ ask: 'string' });
-      })
-      .toThrowError(new TypeError('Ask parameter is not an object'));
-    })
+    test('init() will return false if a message object with a different product signature than the instance product property is passed in', () => {
+      const snapshot = {
+        type: 'snapshot',
+        product_id: 'BTC-EUR',
+        bids: [['6500.11', '0.45054140']],
+        asks: [['6500.15', '0.57753524']]
+      }
+      const init = orderbook.init(snapshot);
+      expect(init).toBe(false);
+      expect(orderbook.book.bids.length).toEqual(0);
+      expect(orderbook.book.asks.length).toEqual(0);
+    });
 
-    test('throws an error if bid is not an object', () => {
-      expect(() => {
-        orderbook.update({ bid: 'string' });
-      })
-      .toThrowError(new TypeError('Bid parameter is not an object'));
-    })
+    test('If a valid snapshot message is passed into init() the orderbook book property will be updated with the bids and asks from the snapshot and the method will return true', () => {
+      const snapshot = {
+        type: 'snapshot',
+        product_id: 'BTC-USD',
+        bids: [['6500.11', '0.45054140']],
+        asks: [['6500.15', '0.57753524']]
+      }
+      const init = orderbook.init(snapshot);
+      expect(orderbook.book['bids'][0]).toEqual(['6500.11', '0.45054140']);
+      expect(init).toBe(true);
+    });
   });
 
-  describe('L2 Orderbook getPrice Method... ', () => {
+  describe('L2 Orderbook update() method... ', () => {
+    let orderbook;
+    beforeEach(() => {
+      orderbook = new Orderbook('BTC-USD');
+    });
+
+    test('update() will throw a Type Error if nothing is passed to it', () => {
+      expect(() => orderbook.update()).toThrow(TypeError);
+    });
+
+    test('update() will throw if something other than an object is passed to it', () => {
+      expect(() => orderbook.update('Prices and updated')).toThrow(TypeError);
+    });
+
+    test('update() will throw a TypeError if a message object is passed with a type property other than \'l2update\'', () => {
+      const invalidMessage = {
+        type: 'snapshot',
+        product_id: 'BTC-USD',
+        bids: [['6500.11', '0.45054140']],
+        asks: [['6500.15', '0.57753524']]
+      }
+      expect(() => orderbook.update(invalidMessage)).toThrow(TypeError);
+    });
+
+    test('update() will return false if a message with a different product signature than the instance product property is passed in', () => {
+      const updateMessage = {
+        type: 'l2update',
+        product_id: 'BTC-EUR',
+        changes: [
+            ['buy', '6500.09', '0.84702376'],
+            ['sell', '6507.00', '1.88933140'],
+            ['sell', '6505.54', '1.12386524'],
+            ['sell', '6504.38', '0']
+        ]
+      };
+      expect(orderbook.update(updateMessage)).toBe(false);
+    });
+
+    test('update() will replace/add bids and asks that are onthe orderbook at the supplied price and side', () => {
+      const updateMessage = {
+        type: 'l2update',
+        product_id: 'BTC-USD',
+        changes: [
+            ['buy', '6500.09', '0.84702376'],
+            ['sell', '6500.15', '1.88933140'],
+            ['sell', '6505.54', '1.12386524'],
+            ['sell', '6504.38', '0']
+        ]
+      };
+      const snapshot = {
+        type: 'snapshot',
+        product_id: 'BTC-USD',
+        bids: [['6500.11', '0.45054140']],
+        asks: [['6500.15', '0.57753524']]
+      }
+      orderbook.init(snapshot);
+      orderbook.update(updateMessage);
+      expect(orderbook.book.bids.filter(bid => bid[0] === '6500.09').length > 0).toBe(true);
+      expect(orderbook.book.asks.filter(ask => ask[0] === '6500.15' && ask[1] === '1.88933140').length > 0).toBe(true);
+    });
+  });
+
+  describe('_updateItems() method testing ... ', () => {
     let orderbook;
     beforeEach(() => {
       orderbook = new Orderbook('BTC-USD');
@@ -70,78 +147,90 @@ describe('Test L2 Orderbook class', () => {
 
     afterEach(() => {
       orderbook = null;
-    })
-
-    test('returns bid data for a price in the orderbook', () => {
-      orderbook.update({bid: { 12: 34 }});
-      const result = orderbook.getPrice(12);
-      expect(result).toEqual({
-        side: 'bid',
-        price: 12,
-        size: 34,
-      });
     });
 
-    test('returns ask data for a price in the orderbook', () => {
-      orderbook.update({ask: { 12: 34 }});
-      const result = orderbook.getPrice(12);
-      expect(result).toEqual({
-        side: 'ask',
-        price: 12,
-        size: 34,
-      });
+    test('If nothing is passed to _updateItems() it will throw a TypeError', () => {
+      expect(() => orderbook._updateItems()).toThrow(TypeError);
     });
 
-    test('returns null if the price is not in the orderbook', () => {
-      orderbook.update({ask: { 12: 34 }});
-      const result = orderbook.getPrice(14);
-      expect(result).toEqual(null);
+    test('_updateItems() will throw TypeError if something other than an array is passed in', () => {
+      expect(() => orderbook._updateItems('Prices and things')).toThrow(TypeError);
     });
 
-    test('throws an error if the price is not set or not a number', () => {
-      expect(() => {
-        orderbook.getPrice();
-      })
-      .toThrowError(new TypeError('L2 Orderbook price is not a valid number'));
+    test('_updateItems() will update the book with the changes specified in the passed in changes array', () => {
+      const snapshot = {
+        type: 'snapshot',
+        product_id: 'BTC-USD',
+        bids: [['6500.11', '0.45054140']],
+        asks: [['6500.15', '0.57753524']]
+      }
 
-      expect(() => {
-        orderbook.getPrice('12');
-      })
-      .toThrowError(new TypeError('L2 Orderbook price is not a valid number'));
+      const changes = [
+        ['buy', '6500.09', '0.84702376'],
+        ['sell', '6507.00', '1.88933140'],
+        ['sell', '6505.54', '1.12386524'],
+        ['sell', '6504.38', '0']
+      ];
+      orderbook.init(snapshot);
+      orderbook._updateItems(changes);
+      expect(orderbook.book.bids.filter(bid => bid[0] === '6500.09').length > 0).toBe(true);
+    });
+
+  })
+
+  describe('L2 Orderbook getPrice() method ... ', () => {
+    let orderbook;
+    beforeEach(() => {
+      const snapshot = {
+        type: 'snapshot',
+        product_id: 'BTC-USD',
+        bids: [['6500.11', '0.45054140']],
+        asks: [['6500.15', '0.57753524']]
+      }
+      orderbook = new Orderbook('BTC-USD');
+      orderbook.init(snapshot);
+    });
+
+    afterEach(() => {
+      orderbook = null;
+    });
+
+    test('getPrice() will throw a TypeError if nothing is passed in', () => {
+      expect(() => orderbook.getPrice()).toThrow(TypeError);
+    });
+
+    test('getPrice() will throw a TypeError if something other than a number is passed in', () => {
+      expect(() => orderbook.getPrice('this is a price')).toThrow(TypeError);
+    });
+
+    test('getPrice() will return the [side, price, size] tuple for the price value that is passed if it is on the orderbook', () => {
+      expect(orderbook.getPrice(6500.11)).toEqual(['bid', 6500.11, 0.45054140]);
+      const updateMessage = {type: 'l2update', product_id: 'BTC-USD', changes: [['sell', '6500.09', '0.84702376']]};
+      orderbook.update(updateMessage);
+      expect(orderbook.getPrice(6500.09)).toEqual(['ask', 6500.09, 0.84702376]);
+    });
+
+    test('getPrice() will return false if the price is not found on the orderbook', () => {
+      expect(orderbook.getPrice(6500.12)).toBeNull();
     });
   });
 
   describe('L2 Orderbook getBestPrices Method... ', () => {
     let orderbook;
     beforeEach(() => {
+      const snapshot = {
+        type: 'snapshot',
+        product_id: 'BTC-USD',
+        bids: [['6500.11', '0.45054140']],
+        asks: [['6500.15', '0.57753524']]
+      }
       orderbook = new Orderbook('BTC-USD');
+      orderbook.init(snapshot);
     });
 
     afterEach(() => {
       orderbook = null;
-    })
-
-    test('returns best bid and data in the orderbook', () => {
-      orderbook.update({ bid: { 12: 34, 45: 67 }, ask: { 89: 1011, 1213: 1415 }});
-      const result = orderbook.getBestPrices();
-      expect(result).toEqual({
-        bid: {
-          price: 45,
-          size: 67,
-        },
-        ask: {
-          price: 89,
-          size: 1011,
-        },
-      });
     });
 
-    test('returns null data if no bids or asks exist in the orderbook', () => {
-      const result = orderbook.getBestPrices();
-      expect(result).toEqual({
-        bid: null,
-        ask: null,
-      });
-    });
   });
 });

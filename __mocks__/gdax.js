@@ -183,56 +183,36 @@ class WebsocketClient extends EventEmitter {
       sequence++;
       price += 0.01;  
       this.productIDs.forEach((product, i) => {
+        const filledOrderId = makeid();
         this.emit('message',
         {
-          type: 'ticker',
-          sequence: sequence,
-          product_id: product,
-          price: price.toString(),
-          open_24h: '660.33000000',
-          volume_24h: '18682.08960534',
-          low_24h: '715.80000000',
-          high_24h: '720.00000000',
-          volume_30d: '592512.25034351',
-          best_bid: (price / 1.0001).toString(),
-          best_ask: (price * 1.0001).toString(),
-          side: tradeId % 2 === 0 ? 'buy' : 'sell',
-          time: new Date().toISOString(),
+          type: 'match',
           trade_id: tradeId,
-          last_size: '0.10405984'
+          sequence: 50,
+          maker_order_id: filledOrderId,
+          taker_order_id: '132fb6ae-456b-4654-b4e0-d681ac05cea1',
+          time: new Date().toISOString(),
+          product_id: product,
+          size: 5.23512,
+          price: 6534.02000000,
+          side: 'sell'
         });
-        if (i === this.productIDs.length - 1) {
-          const filledOrderId = makeid();
-          this.emit('message',
-          {
-            type: 'match',
-            trade_id: 10,
-            sequence: 50,
-            maker_order_id: filledOrderId,
-            taker_order_id: '132fb6ae-456b-4654-b4e0-d681ac05cea1',
-            time: new Date().toISOString(),
-            product_id: product,
-            size: 5.23512,
-            price: 6534.02000000,
-            side: 'sell'
-          });
-          this.emit('message',
-          {
-            type: 'done',
-            side: 'buy',
-            order_id: makeid(),
-            reason: 'filled',
-            product_id: product,
-            price: '6534.02000000',
-            remaining_size: '0.00000000',
-            sequence: 27914079,
-            user_id: '565e2e39d74c2f42f0000083',
-            profile_id: 'b42d9b04-b26a-4871-95be-dd9960ea770a',
-            time: new Date().toISOString() 
-          });
-        }
+        this.emit('message',
+        {
+          type: 'done',
+          side: 'buy',
+          order_id: filledOrderId,
+          reason: 'filled',
+          product_id: product,
+          price: '6534.02000000',
+          remaining_size: '0.00000000',
+          sequence: 27914079,
+          user_id: '565e2e39d74c2f42f0000083',
+          profile_id: 'b42d9b04-b26a-4871-95be-dd9960ea770a',
+          time: new Date().toISOString() 
+        });
       });
-      setTimeout(() => cb(null, tradeId), 200)
+      setTimeout(() => cb(null, ++tradeId), 200)
     }, (err) => { return; } );
   
     // emit fake test heartbeats every 1s

@@ -200,27 +200,6 @@ describe('Broker class testing', () => {
     });
   });
 
-  describe('_dispatchFilledOrderHandler() functionality ...', () =>{
-    let exchange, credentials, broker, order;
-    beforeEach(async () => {
-      credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
-      exchange = await Exchange.build(credentials);
-      broker = new Broker(exchange);
-      order = new Order({ side: 'buy', size: 1, product: 'BTC-USD' });
-      order.setLimit(6534.77);
-    });
-    test('_dispatchFilledOrderHandler() will execute _checkFilled() when messages from exchange feeds that are of type \'match\' are received', async (done) => {
-      exchange = await Exchange.build(credentials);
-      broker = new Broker(exchange);
-      const checkFilled = jest.spyOn(broker, '_checkFilled');
-      broker._dispatchFilledOrderHandler();
-      setTimeout(() => {
-        expect(checkFilled).toHaveBeenCalledTimes(1);
-        done();
-      }, 400);
-    });
-  });
-
   describe('placeOrders() functionality ...', async () => {
     let exchange, broker, credentials, orders, placeOrder, invalidOrder;
     beforeEach(async () => {
@@ -236,7 +215,7 @@ describe('Broker class testing', () => {
     });
     test('When placeOrders() is called, placeOrder() on the exchange will be called for each order in a \'created\' or \'cancelled\' status', async () => {
       const exchange = await Exchange.build(credentials);
-      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: {'1': 1}, ask: {'1': 1} }));
       const placeOrder = jest.spyOn(exchange, 'placeOrder');
       const broker = new Broker(exchange);
       orders[0].setStatus('cancelled');
@@ -246,7 +225,7 @@ describe('Broker class testing', () => {
     });
 
     test('When placeOrders() is called all queued orders in a \'created\' or \'cancelled\' state will get a new id and their status set to \'placed\'', async () => {
-      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: {'1': 1}, ask: {'1': 1} }));
       orders[0].setStatus('cancelled');
       orders.forEach(order => broker.queueOrder(order, true));      
       await broker.placeOrders();
@@ -254,7 +233,7 @@ describe('Broker class testing', () => {
     });
 
     test('placeOrders() will return an array of placed orders upon successful execution', async () => {
-      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: {'1': 1}, ask: {'1': 1} }));
       orders.forEach(order => broker.queueOrder(order, true));
       const placedOrders = await broker.placeOrders();
       expect(Array.isArray(placedOrders)).toBe(true);
@@ -280,7 +259,7 @@ describe('Broker class testing', () => {
       const exchange = await Exchange.build(credentials);
       const cancelOrder = jest.spyOn(exchange, 'cancelOrder');
       const broker = new Broker(exchange);
-      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: {'1': 1}, ask: {'1': 1} }));
       orders.forEach(order => broker.queueOrder(order, true));
       await broker.placeOrders();
       setTimeout(() => {
@@ -293,7 +272,7 @@ describe('Broker class testing', () => {
 
     test('When cancelOrders() gets called the orders that are to be cancelled will get a new status of \'cancelled\'', async (done) => {
       expect.assertions(1);
-      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: {'1': 1}, ask: {'1': 1} }));
       orders.forEach(order => broker.queueOrder(order, true));
       await broker.placeOrders();
       setTimeout(() => {
@@ -306,7 +285,7 @@ describe('Broker class testing', () => {
 
     test('cancelOrders() will return an array of cancelled orders upon successful execution', async (done) => {
       expect.assertions(3);
-      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: {'1': 1}, ask: {'1': 1} }));
       orders.forEach(order => broker.queueOrder(order, true));
       await broker.placeOrders();
       setTimeout(() => {
@@ -320,7 +299,7 @@ describe('Broker class testing', () => {
     });
 
     test('cancelOrders() will not cancel if the limit price of the order is the same as the current base price on the order book', async () => {
-      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: 1, ask: 1 }));
+      orders.forEach(order => exchange.orderBooks[order.product].update({ bid: {'1': 1}, ask: {'1': 1} }));
       orders.forEach(order => broker.queueOrder(order, true));
       await broker.placeOrders();
       await broker.cancelOrders();
