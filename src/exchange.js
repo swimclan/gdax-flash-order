@@ -23,6 +23,7 @@ class Exchange extends EventEmitter {
     this.executor =  new AuthenticatedClient(key, secret, passphrase, 'https://api-public.sandbox.pro.coinbase.com');
     this.feeds = null
     this.valid = false;
+    this.lastHeartbeat = null;
   }
 
   /**
@@ -90,6 +91,7 @@ class Exchange extends EventEmitter {
     const products = await exchange._loadFeeds();
     await exchange._makeOrderbooks(products);
     exchange._dispatchOrderBookUpdater();
+    exchange._dispatchHeartbeatTracker();
     exchange.valid = exchange._testValid();
     return exchange;
   }
@@ -103,6 +105,18 @@ class Exchange extends EventEmitter {
     this.feeds.on('message', message => {
       message.type === 'snapshot' && this.orderbooks[message.product_id].init(message);
       message.type === 'l2update' && this.orderbooks[message.product_id].queueUpdates(message);
+    });
+    return true;
+  }
+
+  /**
+   * A method to dispatch update handlers for exchange orderbooks based on feed messages
+   * @private
+   * @return {boolean} Boolean denoting successful dispatch of update handler
+   */
+  _dispatchHeartbeatTracker() {
+    this.feeds.on('message', tick => {
+      tick.type === 'heartbeat' && (this.lastHeartbeat = tick);
     });
     return true;
   }
