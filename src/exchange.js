@@ -38,7 +38,7 @@ class Exchange extends EventEmitter {
       this.executor.passphrase &&
       this.executor instanceof AuthenticatedClient &&
       this.feeds instanceof WebsocketClient &&
-      Object.values(this.orderBooks).every(book => book instanceof OrderBook)
+      Object.values(this.orderbooks).every(book => book instanceof OrderBook)
     );
   }
 
@@ -52,7 +52,7 @@ class Exchange extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.getProducts().then((products) => {
         const productList = products.map(product => product.id);
-        this.feeds = new WebsocketClient(productList, 'wss://ws-feed-public.sandbox.pro.coinbase.com', this.executor, { channels: ['ticker', 'user'] })
+        this.feeds = new WebsocketClient(productList, 'wss://ws-feed-public.sandbox.pro.coinbase.com', this.executor, { channels: ['level2', 'user'] })
         resolve(productList);
       });
     });
@@ -65,16 +65,16 @@ class Exchange extends EventEmitter {
    * @param {Array} products - A list of product signature strings to build an orderbooks collection with
    * @return {Promise<Orderbook[]>}
    */
-  async _makeOrderBooks(products) {
+  async _makeOrderbooks(products) {
     try {
-      !this.orderBooks && (this.orderBooks = {});
+      !this.orderbooks && (this.orderbooks = {});
       products.forEach((product) => {
-        this.orderBooks[product] = new OrderBook(product);
+        this.orderbooks[product] = new OrderBook(product);
       })
     } catch (error) {
       return Promise.reject('Something went wrong.  Did you supply an array of valid product signatures?');
     }
-    return Promise.resolve(this.orderBooks);
+    return Promise.resolve(this.orderbooks);
   }
 
   /**
@@ -88,7 +88,7 @@ class Exchange extends EventEmitter {
   static async build(credentials = {}) {
     const exchange = new Exchange(credentials);
     const products = await exchange._loadFeeds();
-    await exchange._makeOrderBooks(products);
+    await exchange._makeOrderbooks(products);
     exchange._dispatchOrderBookUpdater();
     exchange.valid = exchange._testValid();
     return exchange;
@@ -97,12 +97,12 @@ class Exchange extends EventEmitter {
   /**
    * A method to dispatch update handlers for exchange orderbooks based on feed messages
    * @private
-   * @param {string} product - A valid crypto product signature
    * @return {boolean} Boolean denoting successful dispatch of update handler
    */
   _dispatchOrderBookUpdater() {
-    this.feeds.on('message', tick => {
-      tick.type === 'ticker' && this.orderBooks[tick.product_id].update({ bid: Number(tick.best_bid), ask: Number(tick.best_ask) });
+    this.feeds.on('message', message => {
+      message.type === 'snapshot' && this.orderbooks[message.product_id].init(message);
+      message.type === 'l2update' && this.orderbooks[message.product_id].queueUpdates(message);
     });
     return true;
   }

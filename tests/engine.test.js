@@ -16,6 +16,7 @@ describe('Engine class testing', () => {
       expect(engine).toHaveProperty('timing', 10000);
       expect(engine).toHaveProperty('started', false);
       expect(engine).toHaveProperty('processes', []);
+      expect(engine).toHaveProperty('async', true);
     });
     test('Engine class instances will have a custom timing value if it is passed into constructor', () => {
       const engine = new Engine(20000);
@@ -76,6 +77,22 @@ describe('Engine class testing', () => {
       engine._run([process]);
       setTimeout(() => {
         expect(noop).toHaveBeenCalledTimes(1);
+        done();
+      }, 20);
+    });
+  });
+
+  describe('Test the synchronous executeProcess() mode', () => {
+    let engine, process, success;
+    beforeEach(() => {
+      engine = new Engine(10, false);
+      success = jest.fn();
+      process = new Process(success, {}, [1, 2, 3]);
+    });
+    test('If async mode is false executeProcesses() will execute the instances process asynchronously', (done) => {
+      engine.start([process]);
+      setTimeout(() => {
+        expect(success).toHaveBeenCalledTimes(1);
         done();
       }, 20);
     });

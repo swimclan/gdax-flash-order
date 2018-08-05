@@ -44,8 +44,10 @@ class Broker extends EventEmitter {
    * @return {number} The price of the best limit order
    */
   _getLimitPrice(order) {
-    const currentOrderBook = this.exchange.orderBooks[order.product].book;
-    return currentOrderBook[order.side === 'buy' ? 'bid' : 'ask'];
+    const currentOrderbook = this.exchange.orderbooks[order.product].book;
+    const priceVector = currentOrderbook[order.side === 'buy' ? 'bids' : 'asks'];
+    if (priceVector.length === 0) { return 0; }
+    return order.side === 'buy' ? Number(priceVector[priceVector.length-1][0]) : Number(priceVector[0][0]);
   }
 
   /**
@@ -79,7 +81,7 @@ class Broker extends EventEmitter {
     this._dispatchFilledOrderHandler();
     const placeOrdersProcess = new Process(this.placeOrders, this, []);
     const cancelOrdersProcess = new Process(this.cancelOrders, this, []);
-    this.engine.start([placeOrdersProcess, cancelOrdersProcess])
+    this.engine.start([placeOrdersProcess, cancelOrdersProcess]);
   }
 
   /**
@@ -96,64 +98,65 @@ class Broker extends EventEmitter {
     this.queue.push(order);
     !silent && !this.enabled && this.enable();
     return order;
-   }
+  }
 
-   /**
-    * Check for the filled state of a placed order
-    * @private
-    * @param {Object} message - The socket feed message containing a filled order
-    * @return {string[]} List of order ids that have been filled
-    */
-   _checkFilled(message) {
-     this.queue.forEach(order => {
-      let {size, maker_order_id} = message;
-      if (maker_order_id === order.id) {
-        const remaining = order.remaining - Number(size);
-        remaining > 0 && order.setRemaining(remaining) && order.setStatus('partial');
-        remaining === 0 && order.setRemaining(remaining) && order.setStatus('filled');
-      }
-     });
-    return true;
-   }
-
-   /**
-    * Dispatch a filled order feed listener on the 'user' channel of the exchange feeds
-    * @private
-    * @return {boolean} A boolean denoting the successful dispatch of the listener
-    */
-   _dispatchFilledOrderHandler() {
-    this.exchange.feeds.on('message', (data) => {
-      if (data.type === 'match') {
-        this._checkFilled(data);
-      }
+  /**
+   * Check for the filled state of a placed order
+   * @private
+   * @param {Object} message - The socket feed message containing a filled order
+   * @return {string[]} List of order ids that have been filled
+   */
+  _checkFilled(message) {
+    this.queue.forEach(order => {
+    let {size, maker_order_id} = message;
+    if (maker_order_id === order.id) {
+      const remaining = order.remaining - Number(size);
+      remaining > 0 && order.setRemaining(remaining) && order.setStatus('partial');
+      remaining === 0 && order.setRemaining(remaining) && order.setStatus('filled');
+    }
     });
-    return true;
-   }
+  return true;
+  }
 
-   /**
-    * Place any created orders in the queue into the market
-    * @async
-    * @public
-    * @return {Promise<Order[]]>} A list of orders that were placed
-    * 
-    */
+  /**
+   * Dispatch a filled order feed listener on the 'user' channel of the exchange feeds
+   * @private
+   * @return {boolean} A boolean denoting the successful dispatch of the listener
+   */
+  _dispatchFilledOrderHandler() {
+  this.exchange.feeds.on('message', (data) => {
+    if (data.type === 'match') {
+      this._checkFilled(data);
+    }
+  });
+  return true;
+  }
+
+  /**
+   * Place any created orders in the queue into the market
+   * @async
+   * @public
+   * @return {Promise<Order[]]>} A list of orders that were placed
+   * 
+   */
   async placeOrders() {
     const placedOrders = [];
     let placedOrder;
-    this.queue.filter(order => order.status === 'created' || order.status === 'cancelled').forEach(async (order) => {
+    const ordersToPlace = this.queue.filter(order => order.status === 'created' || order.status === 'cancelled')
+    for (var order of ordersToPlace) {
       const bestLimit = this._getLimitPrice(order);
       if (bestLimit <= 0) { return []; }
-      order.setStatus('placed');
       order.setLimit(bestLimit);
+      order.setStatus('placing');
       try {
         order.valid && (placedOrder = await this.exchange.placeOrder(order));
         order.setId(placedOrder.id);
         placedOrders.push(order);
+        order.setStatus('placed');
       } catch (e) {
-        order.setStatus('created');
-        return e;
+        throw new Error(e);
       }
-    });
+    };
     return placedOrders;
   }
 
@@ -165,18 +168,19 @@ class Broker extends EventEmitter {
    */
   async cancelOrders() {
     const cancelledOrders = [];
-    this.queue.filter(order => order.status === 'placed' || order.status === 'partial').forEach(async (order) => {
-      if (this.exchange.orderBooks[order.product].book[order.side === 'buy' ? 'bid' : 'ask'] !== order.limit) {
-        order.setStatus('cancelled');
+    const ordersToCancel = this.queue.filter(order => order.status === 'placed' || order.status === 'partial')
+    for (var order of ordersToCancel) {
+      if (this._getLimitPrice(order) !== order.limit) {
+        order.setStatus('cancelling');
         try {
           await this.exchange.cancelOrder(order);
           cancelledOrders.push(order);
+          order.setStatus('cancelled');
         } catch (e) {
-          order.setStatus('placed');
-          return e;
+          throw new Error(e);
         }
       }
-    });
+    };
     return cancelledOrders;
   }
 }

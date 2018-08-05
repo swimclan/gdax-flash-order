@@ -93,4 +93,15 @@ describe('Testing utils', () => {
       expect(validateProduct('ETH-USD')).toBe(true);
     });
   });
+
+  describe('Test sortPrices() ...', () => {
+    const {sortPrices} = require('../src/utils');
+    test('sortPrices() will throw a TypeError if no prices are passed in', () => {
+      expect(() => sortPrices()).toThrow(TypeError);
+    });
+    test('sortPrices() will sort price tuples by price from lowest to highest', () => {
+      const prices = [['6002.14', '1.234876'], ['6001.77', '0.2876222'], ['6001.88', '4.2953772']];
+      expect(sortPrices(prices)).toEqual([ [ '6001.77', '0.2876222' ], [ '6001.88', '4.2953772' ], [ '6002.14', '1.234876' ] ]); 
+    });
+  });
 });

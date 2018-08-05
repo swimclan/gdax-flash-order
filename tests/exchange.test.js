@@ -59,7 +59,8 @@ describe('Test Exchange class', () => {
       expect(exchange.feeds instanceof WebsocketClient).toBe(true);
     });
 
-    test('Exchange instance feeds will emit at least one message', (done) => {
+    test('Exchange instance feeds will emit at least one message', async (done) => {
+      const exchange = await Exchange.build(credentials);
       function onMessage(data) {
         expect(typeof data).toBe('object');
         expect(typeof data.product_id === 'string').toBe(true);
@@ -118,16 +119,16 @@ describe('Test Exchange class', () => {
     });
   });
 
-  describe('Test _makeOrderBooks() ...', () => {
+  describe('Test _makeOrderbooks() ...', () => {
     let credentials, exchange;
     beforeEach(async () => {
       credentials = { key: 'myKey', secret: 'mySecret', passphrase: 'myPassphrase' };
       exchange = await Exchange.build(credentials);
     });
-    test('_makeOrderBooks will return a rejected Promise if anything other than an array is passed', () => {
+    test('_makeOrderbooks will return a rejected Promise if anything other than an array is passed', () => {
       expect.assertions(2);
       const success = jest.fn();
-      exchange._makeOrderBooks(1234).then((orderbooks) => {
+      exchange._makeOrderbooks(1234).then((orderbooks) => {
         return success(orderbooks);
       }).catch((err) => {
         expect(typeof err).toBe('string');
@@ -135,12 +136,12 @@ describe('Test Exchange class', () => {
       });
     });
 
-    test('_makeOrderBooks will return a resolved Promise with a list of newly created orderbooks when passed a valid list of prouct signatures', async () => {
+    test('_makeOrderbooks will return a resolved Promise with a list of newly created orderbooks when passed a valid list of prouct signatures', async () => {
       const products = await exchange.getProducts()
-      const orderbooks = await exchange._makeOrderBooks(products.map(product => product.id));
-      expect(orderbooks).toEqual(exchange.orderBooks);
+      const orderbooks = await exchange._makeOrderbooks(products.map(product => product.id));
+      expect(orderbooks).toEqual(exchange.orderbooks);
       expect(orderbooks['BTC-USD'].product).toBe('BTC-USD');
-      expect(orderbooks['BTC-USD'].book).toEqual({ bid: 0, ask: 0 });
+      expect(orderbooks['BTC-USD'].book).toEqual({ bids: [], asks: [] });
     });
   });
 
@@ -605,11 +606,11 @@ describe('Test Exchange class', () => {
 
     test('_dispatchOrderBookUpdater() will update the appropriate product orderbook on new messages from feed', (done) => {
       setTimeout(() => {
-        expect(exchange.orderBooks['BTC-USD'].book.bid).toBe(710.1889811018898);
-        expect(exchange.orderBooks['BTC-USD'].book.ask).toBe(710.331026);
+        expect(exchange.orderbooks['BTC-USD'].book.bids.length).toBeGreaterThan(0);
+        expect(exchange.orderbooks['BTC-USD'].book.asks.length).toBeGreaterThan(0);
         done();
-      }, 1200);
-      expect(exchange._dispatchOrderBookUpdater('BTC-USD')).toBe(true);
+      }, 2200);
+      expect(exchange._dispatchOrderBookUpdater()).toBe(true);
     });
   });
 });
