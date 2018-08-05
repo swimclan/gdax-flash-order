@@ -35,3 +35,20 @@ module.exports.validateProduct = function(product) {
   }
   return Boolean(product.match(/^[A-Z]{3}\-[A-Z]{3}$/)) || false;
 }
+
+/**
+ * Sort price tuples from the level2 orderbook snapshot
+ * @param {Array[]} prices - A list of price tuples: [[price, size], ...]
+ * @returns {Array} A list of sorted price tuples
+ */
+module.exports.sortPrices = function(prices) {
+  if (!prices || typeof prices === 'undefined' || !Array.isArray(prices)) {
+    throw new TypeError('Utils.sortPrices() : An array of price tuples must be passed in');
+  }
+  return prices.sort((a, b) => {
+    let ret = 0;
+    Number(a[0]) < Number(b[0]) && (ret = -1);
+    Number(a[0]) > Number(b[0]) && (ret = 1);
+    return ret;
+  }).slice();
+}

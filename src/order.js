@@ -75,11 +75,11 @@ class Order extends EventEmitter {
    * @return {string} The updated order status
    */
   setStatus(status) {
-    const validStatuses = ['created', 'partial', 'filled', 'cancelled', 'placed'];
+    const validStatuses = ['created', 'partial', 'filled', 'cancelled', 'cancelling', 'placed', 'placing'];
     if (typeof status !== 'string') {
       throw new TypeError('Type of order status must be a string');
     } else if (validStatuses.indexOf(status) === -1) {
-      throw new TypeError('Order status must be one of either \'created\', \'partial\', \'filled\', \'cancelled\' or \'placed\'');
+      throw new TypeError('Order status must be one of either \'created\', \'partial\', \'filled\', \'cancelled\', \'cancelling\', \'placed\' or \'placing\'');
     }
     this.status = status;
     return true;

@@ -10,10 +10,11 @@ class Engine {
    * @param {number} timing - The number of loop iterations per execution
    * @return {void}
    */
-  constructor(timing=10000) {
+  constructor(timing=10000, async=true) {
     this.timing = timing;
     this.started = false;
     this.processes = [];
+    this.async = async;
   }
 
   /**
@@ -69,13 +70,20 @@ class Engine {
   /**
    * A method to execute the each process function of the Engine instance
    * @private
+   * @async
    * @param {function[]} processes - A list of process functions to be called
    * @return {boolean} A boolean denoting if the processes were successfully executed
    */
-  _executeProcesses() {
-    this.processes.forEach(async process => {
-      await process.fn.apply(process.context, process.args)
-    });
+  async _executeProcesses() {
+    if (this.async) {
+      for (const process of this.processes) {
+        await process.fn.apply(process.context, process.args);
+      }
+    } else {
+      this.processes.forEach(process => {
+        process.fn.apply(process.context, process.args)
+      });
+    }
   }
 }
 
