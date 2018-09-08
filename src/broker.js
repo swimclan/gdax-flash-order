@@ -1,7 +1,5 @@
 const {EventEmitter} = require('events');
 const {AuthenticatedClient, WebsocketClient} = require('gdax');
-const moment = require('moment');
-
 const Order = require('./order');
 const Engine = require('./engine');
 const Process = require('./process');
@@ -83,8 +81,7 @@ class Broker extends EventEmitter {
     this._dispatchFilledOrderHandler();
     const placeOrdersProcess = new Process(this.placeOrders, this, []);
     const cancelOrdersProcess = new Process(this.cancelOrders, this, []);
-    const checkHeartbeatProcess = new Process(this.checkHeartbeat, this, []);
-    this.engine.start([placeOrdersProcess, cancelOrdersProcess, checkHeartbeatProcess]);
+    this.engine.start([placeOrdersProcess, cancelOrdersProcess]);
   }
 
   /**
@@ -185,20 +182,6 @@ class Broker extends EventEmitter {
       }
     };
     return cancelledOrders;
-  }
-
-  async checkHeartbeat() {
-    if (!this.exchange.lastHeartBeat) {
-      return null;
-    } else {
-      const { time } = this.exchange.lastHeartBeat;
-      if (moment(time).isBefore(moment().subtract(5, 'seconds'))) {
-        // Reload the feeds like this?
-        await this.exchange._loadFeeds();
-        return moment().format('hh:mm:ss:SS');
-      }
-      return moment(time).format('hh:mm:ss:SS');
-    }
   }
 }
 

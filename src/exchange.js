@@ -1,8 +1,9 @@
 const {AuthenticatedClient, WebsocketClient} = require('gdax');
 const Order = require('./order');
+const Engine = require('./engine');
+const Process = require('./process');
 const OrderBook = require('./orderbook');
-const Broker = require('./broker');
-const utils = require('./utils');
+const moment = require('moment');
 const {EventEmitter} = require('events');
 const {get} = require('lodash');
 
@@ -53,7 +54,10 @@ class Exchange extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.getProducts().then((products) => {
         const productList = products.map(product => product.id);
-        this.feeds = new WebsocketClient(productList, 'wss://ws-feed-public.sandbox.pro.coinbase.com', this.executor, { channels: ['level2', 'user'] })
+        this.feeds = new WebsocketClient(productList, 'wss://ws-feed-public.sandbox.pro.coinbase.com', this.executor, { channels: ['level2', 'user'] });
+        this.feeds.engine = new Engine(500);
+        const checkHeartbeatProcess = new Process(this._checkHeartbeat, this, []);
+        this.feeds.engine.start([checkHeartbeatProcess]);
         resolve(productList);
       });
     });
@@ -79,7 +83,7 @@ class Exchange extends EventEmitter {
   }
 
   /**
-   * A static build method to construct intsances of exchange with all relevant data bound
+   * A static build method to construct instances of exchange with all relevant data bound
    * @static
    * @public
    * @async
@@ -115,8 +119,8 @@ class Exchange extends EventEmitter {
    * @return {boolean} Boolean denoting successful dispatch of update handler
    */
   _dispatchHeartbeatTracker() {
-    this.feeds.on('message', tick => {
-      tick.type === 'heartbeat' && (this.lastHeartbeat = tick);
+    this.feeds.on('message', message => {
+      message.type === 'heartbeat' && (this.feeds.lastHeartbeat = message);
     });
     return true;
   }
@@ -218,6 +222,19 @@ class Exchange extends EventEmitter {
         return resolve(data);
       });
     });
+  }
+
+  async _checkHeartbeat() {
+    if (!this.feeds.lastHeartbeat) {
+      return null;
+    } else {
+      const { time } = this.feeds.lastHeartbeat;
+      if (moment(time).isBefore(moment().subtract(5, 'seconds'))) {
+        await this._loadFeeds();
+        return moment().format('hh:mm:ss:SS');
+      }
+      return moment(time).format('hh:mm:ss:SS');
+    }
   }
 }
 
