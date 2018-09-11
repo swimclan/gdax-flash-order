@@ -20,7 +20,7 @@ class Exchange extends EventEmitter {
     const key = get(credentials, 'key', null);
     const secret = get(credentials, 'secret', null);
     const passphrase = get(credentials, 'passphrase', null);
-    this.executor =  new AuthenticatedClient(key, secret, passphrase, 'https://api-public.sandbox.pro.coinbase.com');
+    this.executor =  new AuthenticatedClient(key, secret, passphrase, process.env.NODE_ENV !== 'production' ? 'https://api-public.sandbox.pro.coinbase.com' : 'https://api.pro.coinbase.com');
     this.feeds = null
     this.valid = false;
   }
@@ -52,7 +52,7 @@ class Exchange extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.getProducts().then((products) => {
         const productList = products.map(product => product.id);
-        this.feeds = new WebsocketClient(productList, 'wss://ws-feed-public.sandbox.pro.coinbase.com', this.executor, { channels: ['level2', 'user'] })
+        this.feeds = new WebsocketClient(productList, process.env.NODE_ENV !== 'production' ? 'wss://ws-feed-public.sandbox.pro.coinbase.com' : 'wss://ws-feed.pro.coinbase.com', this.executor, { channels: ['level2', 'user'] })
         resolve(productList);
       });
     });

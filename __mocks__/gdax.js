@@ -27,6 +27,7 @@ class AuthenticatedClient {
     this.secret = secret;
     this.passphrase = passphrase;
     this.connected = true;
+    this.apiURI = apiURI;
   
     this._connection = function(state) {
       return this.connected = state === true;
@@ -166,13 +167,14 @@ class AuthenticatedClient {
 }
 
 class WebsocketClient extends EventEmitter {
-  constructor(productIDs=[], uri='wss://test.mock.com', credentials={}, options={}) {
+  constructor(productIDs=[], websocketURI='wss://test.mock.com', credentials={}, options={}) {
     super();
     this.auth = credentials
     this.socket = {readyState: 0}
     this.channels = get(options, 'channels', []).concat(['heartbeat']);
     this.productIDs = productIDs;
     this.broadcastSocket();
+    this.websocketURI = websocketURI;
   }
 
   broadcastSocket() {
