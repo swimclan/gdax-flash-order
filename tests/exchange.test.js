@@ -92,6 +92,20 @@ describe('Test Exchange class', () => {
       credentials = {key: 'myKey', secret: 'mySecret', passphrase: 'myPassPhrase'};
       exchange = await Exchange.build(credentials);
     });
+    test('_loadFeeds() will connect to sandbox URL if NODE_ENV is set to developement', (done) => {
+      process.env.NODE_ENV = 'development';
+      exchange._loadFeeds().then(() => {
+        expect(exchange.feeds.websocketURI).toEqual('wss://ws-feed-public.sandbox.pro.coinbase.com');
+        done();
+      });
+    });
+    test('_loadFeeds() will connect to production URL if NODE_ENV is set to production', (done) => {
+      process.env.NODE_ENV = 'production';
+      exchange._loadFeeds().then(() => {
+        expect(exchange.feeds.websocketURI).toEqual('wss://ws-feed.pro.coinbase.com');
+        done();
+      });
+    });
     test('_loadFeeds() will return a resolved promise with the list of executor products that were successfully loaded', () => {
       expect.assertions(3);
       const failure = jest.fn();
@@ -141,7 +155,7 @@ describe('Test Exchange class', () => {
       const orderbooks = await exchange._makeOrderbooks(products.map(product => product.id));
       expect(orderbooks).toEqual(exchange.orderbooks);
       expect(orderbooks['BTC-USD'].product).toBe('BTC-USD');
-      expect(orderbooks['BTC-USD'].book).toEqual({ bids: [], asks: [] });
+      expect(orderbooks['BTC-USD'].book).toEqual({ bids: null, asks: null });
     });
   });
 
@@ -606,8 +620,8 @@ describe('Test Exchange class', () => {
 
     test('_dispatchOrderBookUpdater() will update the appropriate product orderbook on new messages from feed', (done) => {
       setTimeout(() => {
-        expect(exchange.orderbooks['BTC-USD'].book.bids.length).toBeGreaterThan(0);
-        expect(exchange.orderbooks['BTC-USD'].book.asks.length).toBeGreaterThan(0);
+        expect(exchange.orderbooks['BTC-USD'].book.bids).not.toBeNull();
+        expect(exchange.orderbooks['BTC-USD'].book.asks).not.toBeNull();
         done();
       }, 2200);
       expect(exchange._dispatchOrderBookUpdater()).toBe(true);

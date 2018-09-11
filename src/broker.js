@@ -46,8 +46,8 @@ class Broker extends EventEmitter {
   _getLimitPrice(order) {
     const currentOrderbook = this.exchange.orderbooks[order.product].book;
     const priceVector = currentOrderbook[order.side === 'buy' ? 'bids' : 'asks'];
-    if (priceVector.length === 0) { return 0; }
-    return order.side === 'buy' ? Number(priceVector[priceVector.length-1][0]) : Number(priceVector[0][0]);
+    if (!priceVector) { return 0; }
+    return Number(priceVector.value[0]);
   }
 
   /**

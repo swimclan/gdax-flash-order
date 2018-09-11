@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.4] - 2018-09-11
+### Added
+- Level 2 Order book uses linked list data structure for better update performance
+
 ## [0.2.3] - 2018-07-19
 ### Added
 - Level 2 Order book capabiity

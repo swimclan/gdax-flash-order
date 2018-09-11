@@ -1,5 +1,6 @@
 const Orderbook = require('../src/orderbook');
 const Engine = require('../src/engine');
+const {createList} = require('../src/utils');
 
 /* Data examples:
 
@@ -23,6 +24,17 @@ const Engine = require('../src/engine');
 
 */
 
+function inList(list, value, atIndex) {
+  let current, found = false;
+  while (true) {
+    !current && (current = list);
+    found = current.value[atIndex] === value;
+    current = current.next;
+    if (found || !current) { break; }
+  }
+  return found;
+}
+
 describe('Test Orderbook class', () => {
 
   describe('Orderbook constructor... ', () => {
@@ -39,7 +51,7 @@ describe('Test Orderbook class', () => {
     test('Orderbook instance will have a product, book and queue property', () => {
       orderbook = new Orderbook('BTC-USD');
       expect(orderbook).toHaveProperty('product', 'BTC-USD');
-      expect(orderbook).toHaveProperty('book', {bids: [], asks: []});
+      expect(orderbook).toHaveProperty('book', {bids: null, asks: null});
       expect(orderbook).toHaveProperty('queue', []);
       expect(orderbook).toHaveProperty('engine');
     });
@@ -79,8 +91,10 @@ describe('Test Orderbook class', () => {
     });
     test('init() will assign sorted price tuples to the book', () => {
       orderbook.init(snapshot);
-      expect(orderbook.book.asks).toEqual([ [ '6500.13', '1.948533' ], [ '6500.15', '0.57753524' ], [ '6500.24', '2.909934' ] ]);
-      expect(orderbook.book.bids).toEqual([ [ '6500.03', '2. 000435' ], [ '6500.09', '0.04' ], [ '6500.11', '0.45054140' ] ]);
+      const asksList = createList([ [ '6500.13', '1.948533' ], [ '6500.15', '0.57753524' ], [ '6500.24', '2.909934' ] ]);
+      const bidsList = createList([ [ '6500.11', '0.45054140' ], [ '6500.09', '0.04' ], [ '6500.03', '2. 000435' ] ]);
+      expect(orderbook.book.asks).toEqual(asksList);
+      expect(orderbook.book.bids).toEqual(bidsList);
     });
     test('init() will return false if a message for a product other than the current orderbook product property is passed in', () => {
       snapshot.product_id = 'BTC-EUR';
@@ -164,14 +178,28 @@ describe('Test Orderbook class', () => {
       orderbook.init(snapshot);
       orderbook.queueUpdates(l2update);
       orderbook.applyQueue();
-      expect(orderbook.book.bids.every(item => item[0] !== '6500.09')).toBe(true);
+      expect(inList(orderbook.book.bids, '6500.09', 0)).toBe(false);
     });
     test('applyQueue() will insert a price if it isnt already there', () => {
       orderbook.init(snapshot);
-      expect(orderbook.book.asks.filter(item => item[0] === '6500.14').length).toEqual(0);
+      expect(inList(orderbook.book.asks, '6500.14', 0)).toBe(false);
       orderbook.queueUpdates(l2update);
       orderbook.applyQueue();
-      expect(orderbook.book.asks.filter(item => item[0] === '6500.14').length).toEqual(1);
+      expect(inList(orderbook.book.asks, '6500.14', 0)).toBe(true);
+    });
+    test('applyQueue() will remove the lowest ask if a change at that price with size of zero is received', () => {
+      orderbook.init(snapshot);
+      expect(inList(orderbook.book.asks, '6500.13', 0)).toBe(true);
+      const l2update = {
+        "type": "l2update",
+        "product_id": "BTC-USD",
+        "changes": [
+          ['sell', '6500.13', '0']
+        ]
+      };
+      orderbook.queueUpdates(l2update);
+      orderbook.applyQueue();
+      expect(inList(orderbook.book.asks, '6500.13', 0)).toBe(false);
     });
     test('applyQueue() will not run and return false if the orderbook is not completely initialized', () => {
       orderbook.queueUpdates(l2update);
@@ -179,11 +207,11 @@ describe('Test Orderbook class', () => {
     });
     test('applyQueue() will update an existing price level with a new size from update change', () => {
       orderbook.init(snapshot);
-      expect(orderbook.book.asks.filter(item => item[0] === '6500.13' && item[1] === '1.948533').length).toEqual(1);
+      expect(inList(orderbook.book.asks, '6500.13', 0) && inList(orderbook.book.asks, '1.948533', 1)).toBe(true);
       orderbook.queueUpdates(l2update);
       orderbook.applyQueue();
-      expect(orderbook.book.asks.filter(item => item[0] === '6500.13' && item[1] === '1.948533').length).toEqual(0);
-      expect(orderbook.book.asks.filter(item => item[0] === '6500.13' && item[1] === '0.999913').length).toEqual(1);
+      expect(inList(orderbook.book.asks, '6500.13', 0) && inList(orderbook.book.asks, '1.948533', 1)).toBe(false);
+      expect(inList(orderbook.book.asks, '6500.13', 0) && inList(orderbook.book.asks, '0.999913', 1)).toBe(true);
     });
     test('applyQueue() will not run and return false if the queue is empty', () => {
       orderbook.init(snapshot);

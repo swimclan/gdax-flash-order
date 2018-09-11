@@ -1,6 +1,8 @@
-const {sortPrices} = require('./utils');
+const {sortPrices, createList} = require('./utils');
 const Engine = require('./engine');
 const Process = require('./process');
+const {Node} = require('./node');
+
 /**
  * A class representing the level 2 order book of the exchange
  */
@@ -12,9 +14,9 @@ class Orderbook {
    */
   constructor(product='BTC-USD') {
     this.product = product;
-    this.book = { bids: [], asks: [] };
+    this.book = { bids: null, asks: null };
     this.queue = [];
-    this.engine = new Engine(1, false);
+    this.engine = new Engine(0, false);
   }
 
   /**
@@ -34,8 +36,8 @@ class Orderbook {
     if (message.product_id !== this.product) {
       return false;
     }
-    this.book.bids = sortPrices(message.bids);
-    this.book.asks = sortPrices(message.asks);
+    this.book.bids = createList(sortPrices(message.bids, true));
+    this.book.asks = createList(sortPrices(message.asks));
     const applyQueueProcess = new Process(this.applyQueue, this, null);
     this.engine.start([applyQueueProcess]);
     return true;
@@ -59,35 +61,42 @@ class Orderbook {
     return true;
   }
 
-  /**
-   * A method to apply all the price changes in-queue to the current sorted book
-   * @private
-   * @memberof Orderbook
-   * @returns {boolean} A boolean denoting the successful queue processing execution
-   */
   applyQueue() {
-    if (!this.book.bids.length || !this.book.asks.length || !this.queue.length) { return false }
-    while(this.queue.length) {
-      const change = this.queue.shift();
-      let side = change[0] === 'buy' ? 'bids' : 'asks';
-      let saved = [];
-      let found = false;
-      while(this.book[side].length) {
-        if (this.book[side][0][0] === change[1] && !found) {
-          this.book[side].shift();
-          change[2] != 0 && saved.push([change[1], change[2]]);
-          found = true;
-        } else if (this.book[side][0][0] > change[1] && !found) {
-          change[2] != 0 && saved.push([change[1], change[2]]);
-          found = true;
-        } else {
-          saved.push(this.book[side].shift());
+    if (!this.book.bids || !this.book.asks || this.queue.length === 0) { return false; }
+    const changes = this.queue.splice(0);
+    changes.forEach(change => {
+      const side = change[0] === 'buy' ? 'bids': 'asks';
+      const price = change[1];
+      const size = change[2];
+      let current, prev;
+      let determinant = side === 'asks' ? 1 : -1;
+      while(true) {
+        if (!current) {
+          if ((price * determinant) < (this.book[side].value[0] * determinant)) {
+            const firstNode = new Node([price, size], this.book[side]);
+            this.book[side] = firstNode;        
+          }
+          if (Number(price) === Number(this.book[side].value[0]) && Number(size) === 0) {
+            this.book[side] = this.book[side].next;
+          }
+          current = this.book[side];
         }
+        if (current.next && (price * determinant) > (current.value[0] * determinant) && (price * determinant) < (current.next.value[0] * determinant)) {
+          const temp = current.next;
+          current.next = new Node([price, size], temp);
+        } else if (!current.next && (price * determinant) > (current.value[0] * determinant)) {
+          current.next = new Node([price, size], null);
+        } else if (Number(price) === Number(current.value[0]) && Number(size) > 0) {
+          current.value = [price, size];
+        } else if (prev && Number(price) === Number(current.value[0]) && Number(size) === 0) {
+          prev.next = current.next;
+        }
+        prev = current;
+        current = current.next;
+        if (!current) { break; }
       }
-      !found && saved.push([change[1], change[2]]);
-      this.book[side] = saved.slice();
-    };
-    return true;
+    });
+    return true; 
   }
 }
 
