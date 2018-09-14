@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.5] - 2018-09-13
+### Added
+- Implemented placeOrder, cancelOrder and getProducts with axios request library, thus retiring gdax-node authClient
+
 ## [0.2.4] - 2018-09-11
 ### Added
 - Level 2 Order book uses linked list data structure for better update performance
