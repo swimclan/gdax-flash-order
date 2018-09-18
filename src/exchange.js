@@ -1,4 +1,5 @@
-const {AuthenticatedClient, WebsocketClient} = require('gdax');
+const {WebsocketClient} = require('gdax');
+const Executor = require('./executor');
 const Order = require('./order');
 const OrderBook = require('./orderbook');
 const Broker = require('./broker');
@@ -20,7 +21,7 @@ class Exchange extends EventEmitter {
     const key = get(credentials, 'key', null);
     const secret = get(credentials, 'secret', null);
     const passphrase = get(credentials, 'passphrase', null);
-    this.executor =  new AuthenticatedClient(key, secret, passphrase, process.env.NODE_ENV !== 'production' ? 'https://api-public.sandbox.pro.coinbase.com' : 'https://api.pro.coinbase.com');
+    this.executor =  new Executor({key, secret, passphrase});
     this.feeds = null
     this.valid = false;
   }
@@ -36,7 +37,7 @@ class Exchange extends EventEmitter {
       this.executor.key &&
       this.executor.secret &&
       this.executor.passphrase &&
-      this.executor instanceof AuthenticatedClient &&
+      this.executor instanceof Executor &&
       this.feeds instanceof WebsocketClient &&
       Object.values(this.orderbooks).every(book => book instanceof OrderBook)
     );

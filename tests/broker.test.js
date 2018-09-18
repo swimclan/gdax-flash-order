@@ -2,7 +2,6 @@ const Broker = require('../src/broker');
 const Exchange = require('../src/exchange');
 const Order = require('../src/order');
 const Engine = require('../src/engine');
-const { WebsocketClient } = require('gdax');
 
 describe('Broker class testing', () => {
 
